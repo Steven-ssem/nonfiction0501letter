@@ -1,107 +1,2573 @@
-타이틀에서 괄호는 다음과 같이 바꿔 줘: 
-( Letter to Lucy (Row Your Boat) )
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Jack's Smart Learning Webapp ( Letter to Lucy (Row Your Boat) )</title>
+<script type="module">
+	// Firebase SDK Imports
+	import * as firebase from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+	import * as auth from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+	import * as firestore from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+	window.firebase = {
+		initializeApp: firebase.initializeApp,
+		auth: {
+			getAuth: auth.getAuth,
+			signInAnonymously: auth.signInAnonymously,
+			signInWithCustomToken: auth.signInWithCustomToken,
+			onAuthStateChanged: auth.onAuthStateChanged,
+		},
+		firestore: {
+			getFirestore: firestore.getFirestore,
+			doc: firestore.doc,
+			setDoc: firestore.setDoc,
+			updateDoc: firestore.updateDoc,
+			deleteDoc: firestore.deleteDoc,
+			collection: firestore.collection,
+			onSnapshot: firestore.onSnapshot,
+			getDoc: firestore.getDoc,
+			writeBatch: firestore.writeBatch,
+			setLogLevel: firestore.setLogLevel,
+			// Add other firestore functions as needed
+		}
+	};
+</script>
+
+<style>
+/* 요청사항: 손글씨 연습 폰트로 'Poppins' 사용 */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Parisienne:wght@400&display=swap');
+
+html, body {
+height: 100%;
+margin: 0;
+}
+
+body {
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+line-height: 1.6;
+background-color: #F3F2EC;
+color: #333;
+padding: 20px;
+padding-bottom: 600px; /* 최하단 여백 추가 */
+transition: padding 0.3s ease;
+user-select: none;
+}
+
+h1 {
+text-align: center;
+color: #1E93AB;
+margin-bottom: 20px;
+}
+
+/* 상단 바 고정 */
+.main-controls {
+background-color: #fff;
+padding: 15px 20px;
+margin: -20px;
+margin-bottom: 20px;
+box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+display: flex;
+justify-content: flex-end;
+align-items: center;
+flex-wrap: wrap;
+gap: 10px;
+position: sticky;
+top: 0;
+left: 0;
+right: 0;
+z-index: 1001;
+}
+
+/* '단어학습' 버튼 스타일 */
+.control-btn {
+background-color: #1E93AB;
+color: white;
+border: none;
+padding: 8px 16px;
+border-radius: 5px;
+cursor: pointer;
+font-weight: bold;
+transition: background-color 0.3s ease;
+}
+
+.control-btn-group {
+margin-right: auto;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.control-btn:hover {
+background-color: #1E93AB;
+}
+
+.test-type-control {
+display: flex;
+align-items: center;
+gap: 8px;
+background-color: #F3F2EC;
+padding: 4px 10px;
+border-radius: 20px;
+}
+
+.test-type-control span {
+font-size: 0.9em;
+font-weight: bold;
+color: #555;
+cursor: default;
+}
+
+.control-btn.testing {
+background-color: #E62727;
+animation: blink 1s linear infinite;
+}
+
+@keyframes blink {
+50% { opacity: 0.6; }
+}
+
+.main-controls span {
+margin-right: 10px;
+font-weight: bold;
+color: #555;
+/* 오디오 토글 스위치와 텍스트를 정렬하기 위해 flex 사용 */
+display: inline-flex;
+align-items: center;
+}
+
+/* TTS 관련 토글 스타일 제거 */
+
+.table-header {
+display: flex;
+align-items: center;
+gap: 15px;
+margin-top: 40px;
+}
+
+.table-header h2 {
+margin-top: 0;
+margin-bottom: 0;
+}
+
+#word-game-score-display, #sentence-game-score-display {
+font-weight: bold;
+color: #E62727;
+background-color: #DCDCDC;
+padding: 5px 10px;
+border-radius: 15px;
+font-size: 0.9em;
+}
+
+h2 {
+border-bottom: 2px solid #1E93AB;
+padding-bottom: 10px;
+color: #1E93AB;
+margin-top: 40px;
+}
+
+table {
+width: 100%;
+border-collapse: collapse;
+margin-bottom: 40px;
+box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+background-color: #ffffff;
+}
+
+th, td {
+border: 1px solid #DCDCDC;
+padding: 12px;
+text-align: center;
+vertical-align: middle;
+transition: background-color 0.3s ease;
+}
+
+th {
+background-color: #1E93AB;
+color: white;
+font-weight: bold;
+}
+
+tr:nth-child(even) {
+background-color: #F3F2EC;
+}
+
+/* Style for completed rows */
+.row-completed {
+background-color: #DCDCDC !important;
+}
+
+.row-completed td {
+color: #555;
+}
+
+/* Style for the sentence the user came from */
+.highlight-origin {
+background-color: #F3F2EC !important; /* Light yellow highlight */
+outline: 2px solid #1E93AB; /* Gold outline */
+outline-offset: -2px;
+}
+
+/* 요청사항: 듣기 열 첫 번째 행 강조 */
+.highlight-listen-cell {
+background-color: #FFEB3B !important; /* Yellow */
+}
+
+.font-10 { font-size: 10pt; }
+.font-15 { font-size: 25pt; }
+.font-30 { font-size: 30pt; }
+.color-black { color: #212529; }
+.text-hidden { color: transparent !important; background-color: #DCDCDC !important; }
+
+/* When a cell is hidden, hide links inside it too */
+.text-hidden a {
+color: transparent !important;
+}
+
+td[data-label="뜻"] {
+font-size: 17.5pt;
+}
+
+.checkbox-15 {
+width: 18px;
+height: 18px;
+cursor: pointer;
+}
+
+.clickable {
+cursor: pointer;
+user-select: none; /* 텍스트 선택 방지 */
+transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.clickable:hover {
+transform: scale(1.1);
+}
+
+/* 클릭 방지 클래스 */
+.no-pointer-events {
+pointer-events: none;
+opacity: 0.8;
+}
+
+.repeat-cell {
+/* 기존 CSS는 유지하되, JS에서 clickable을 제거하여 정적 표시 */
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px; /* 버튼과 숫자 사이 간격 */
+font-size: 1.2em; /* 숫자 크기 */
+font-weight: bold;
+}
+
+/* 반복 버튼 스타일 제거 (사용하지 않음) */
+
+a {
+text-decoration: none;
+color: #1E93AB;
+font-weight: bold;
+}
+
+a:hover {
+text-decoration: underline;
+}
+
+#back-btn {
+display: none; /* Initially hidden */
+position: fixed;
+bottom: 20px;
+right: 20px;
+z-index: 1000;
+width: 50px;
+height: 50px;
+border-radius: 50%;
+background-color: #1E93AB;
+color: white;
+border: none;
+font-size: 24px;
+cursor: pointer;
+box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+#back-btn:hover {
+background-color: #E62727;
+transform: scale(1.1);
+}
+
+/* Toggle Switch Styles */
+.switch {
+position: relative;
+display: inline-block;
+width: 40px;
+height: 20px;
+vertical-align: middle;
+margin-left: 8px;
+}
+
+.switch input {
+opacity: 0;
+width: 0;
+height: 0;
+}
+
+.slider {
+position: absolute;
+cursor: pointer;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background-color: #DCDCDC;
+transition: .4s;
+}
+
+.slider:before {
+position: absolute;
+content: "";
+height: 16px;
+width: 16px;
+left: 2px;
+bottom: 2px;
+background-color: white;
+transition: .4s;
+}
+
+input:checked + .slider {
+background-color: #1E93AB;
+}
+
+input:checked + .slider:before {
+transform: translateX(20px);
+}
+
+.slider.round {
+border-radius: 20px;
+}
+
+.slider.round:before {
+border-radius: 50%;
+}
 
 
-단어는 다음과 같아:
+/* --- Practice Sections --- */
+.practice-section {
+margin-top: 60px;
+padding: 20px;
+background-color: #fff;
+border-radius: 8px;
+box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
 
-1	overboard	물밖으로, 배 밖으로	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/001_overboard_1_nonfiction0501letter.mp3
-2	riverbank	강둑	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/002_riverbank_2_nonfiction0501letter.mp3
-3	rowboat	노 젓는 배	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/003_rowboat_3_nonfiction0501letter.mp3
-4	ripples	잔물결	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/004_ripples_4_nonfiction0501letter.mp3
-5	breeze	산들바람	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/005_breeze_5_nonfiction0501letter.mp3
-6	peaceful	평화로운	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/006_peaceful_6_nonfiction0501letter.mp3
-7	quacked	(오리가) 꽥꽥 울었다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/007_quacked_7_nonfiction0501letter.mp3
-8	yowled	(고양이가) 울부짖었다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/008_yowled_8_nonfiction0501letter.mp3
-9	purr	(고양이가) 가르릉거리다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/009_purr_9_nonfiction0501letter.mp3
-10	splashed	첨벙거렸다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/010_splashed_10_nonfiction0501letter.mp3
-11	tipped over	뒤집혔다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/011_tipped_over_11_nonfiction0501letter.mp3
-12	chaos	혼란	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/012_chaos_12_nonfiction0501letter.mp3
-13	echoed	메아리쳤다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/013_echoed_13_nonfiction0501letter.mp3
-14	suddenly	갑자기	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/014_suddenly_14_nonfiction0501letter.mp3
-15	shouted	외쳤다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/015_shouted_15_nonfiction0501letter.mp3
-16	sank	가라앉았다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/016_sank_16_nonfiction0501letter.mp3
-17	steady	안정된	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/017_steady_17_nonfiction0501letter.mp3
-18	smooth	잔잔한	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/018_smooth_18_nonfiction0501letter.mp3
-19	heavy	무거운	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/019_heavy_19_nonfiction0501letter.mp3
-20	shook	흔들렸다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/020_shook_20_nonfiction0501letter.mp3
-21	nodded	고개를 끄덕였다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/021_nodded_21_nonfiction0501letter.mp3
-22	leafy	나뭇잎이 무성한	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/022_leafy_22_nonfiction0501letter.mp3
-23	whispered	속삭였다	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/023_whispered_23_nonfiction0501letter.mp3
-24	laughter	웃음	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/024_laughter_24_nonfiction0501letter.mp3
-25	troubles	걱정거리, 문제들	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/025_troubles_25_nonfiction0501letter.mp3
-26	peacefulness	고요함	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/026_peacefulness_26_nonfiction0501letter.mp3
-27	magic	마법	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/027_magic_27_nonfiction0501letter.mp3
-28	sunlight	햇살	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/028_sunlight_28_nonfiction0501letter.mp3
-29	lemonade	레모네이드	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/029_lemonade_29_nonfiction0501letter.mp3
-30	forward	앞으로, 전진하여	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/030_forward_30_nonfiction0501letter.mp3
+.practice-section h2 {
+margin-top: 0;
+}
 
+.handwriting-paragraph {
+line-height: 2.5;
+color: #444;
+border-bottom: 1px dashed #DCDCDC;
+padding-bottom: 20px;
+margin-bottom: 20px;
+}
 
+#writing-practice-section .handwriting-paragraph {
+font-family: 'Poppins', sans-serif;
+font-size: 35pt;
+}
 
+#cursive-practice-section .handwriting-paragraph {
+font-family: 'Parisienne', cursive;
+font-size: 40pt; /* Cursive needs more space */
+line-height: 2.8;
+}
 
+.handwriting-paragraph:last-child {
+border-bottom: none;
+margin-bottom: 0;
+}
 
-
-문장은 다음과 같아:
-
-순서	영어 문장	한글 번역	Paragraph	오디오
-1	Dear Lucy,	루시에게,	P1	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/031_Dear_Lucy_31_nonfiction0501letter.mp3
-2	It was the best and strangest day I have ever had on the river.	오늘은 강에서 보낸 날 중 가장 멋지고 이상한 하루였어.	P1	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/032_It_was_the_best_and_strangest_day_I_have_ever_had_on_the_river_32_nonfiction0501letter.mp3
-3	I just have to tell you everything that happened because I still can’t stop smiling about it.	무슨 일이 있었는지 꼭 말해주고 싶어. 아직도 웃음이 멈추질 않아.	P1	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/033_I_just_have_to_tell_you_everything_that_happened_because_I_still_cant_stop_smiling_about_it_33_nonfiction0501letter.mp3
-4	You know my little rowboat, the one Father painted blue last spring?	아빠가 지난봄에 파란색으로 칠해준 내 조그만 노 젓는 배 기억나지?	P1	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/034_You_know_my_little_rowboat_the_one_Father_painted_blue_last_spring_34_nonfiction0501letter.mp3
-5	I took it down to the river this morning.	오늘 아침 그걸 강으로 가져갔어.	P1	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/035_I_took_it_down_to_the_river_this_morning_35_nonfiction0501letter.mp3
-6	The sun was bright, the sky was blue, and the breeze felt soft and warm on my face.	햇살이 밝고 하늘은 파랗고, 바람이 얼굴에 부드럽게 닿았어.	P1	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/036_The_sun_was_bright_the_sky_was_blue_and_the_breeze_felt_soft_and_warm_on_my_face_36_nonfiction0501letter.mp3
-7	I thought it would be a quiet ride. I was wrong!	조용한 시간일 거라 생각했는데, 완전 틀렸어!	P1	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/037_I_thought_it_would_be_a_quiet_ride_I_was_wrong_37_nonfiction0501letter.mp3
-8	At first, I pushed the boat into the water and started to row all by myself.	처음에는 배를 밀어 넣고 혼자 노를 젓기 시작했어.	P2	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/038_At_first_I_pushed_the_boat_into_the_water_and_started_to_row_all_by_myself_38_nonfiction0501letter.mp3
-9	The water made small ripples, and I sang my favorite song, “I row, row, row my boat.”	물결이 잔잔하게 일었고, 나는 “노를 저어요, 저어요, 저어요” 노래를 불렀지.	P2	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/039_The_water_made_small_ripples_and_I_sang_my_favorite_song_I_row_row_row_my_boat_39_nonfiction0501letter.mp3
-10	It felt so good to hear the oars dip into the water.	노가 물에 닿는 소리가 참 기분 좋았어.	P2	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/040_It_felt_so_good_to_hear_the_oars_dip_into_the_water_40_nonfiction0501letter.mp3
-11	Then, out of nowhere, my dog came running along the riverbank, barking like he was calling me.	그런데 갑자기 개가 강둑을 따라 달려오면서 마치 나를 부르는 듯이 짖었어.	P2	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/041_Then_out_of_nowhere_my_dog_came_running_along_the_riverbank_barking_like_he_was_calling_me_41_nonfiction0501letter.mp3
-12	Before I could say a word, he jumped right into the boat and licked my face.	내가 뭐라 말하기도 전에 배에 뛰어들어 얼굴을 핥았어.	P2	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/042_Before_I_could_say_a_word_he_jumped_right_into_the_boat_and_licked_my_face_42_nonfiction0501letter.mp3
-13	I laughed so hard I almost dropped an oar.	너무 웃겨서 노를 떨어뜨릴 뻔했지.	P2	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/043_I_laughed_so_hard_I_almost_dropped_an_oar_43_nonfiction0501letter.mp3
-14	Just when the boat stopped rocking, I saw a furry blur come flying out of a tree—my cat!	배가 겨우 멈췄을 때, 나무에서 털복숭이 뭔가가 날아왔어—내 고양이였어!	P3	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/044_Just_when_the_boat_stopped_rocking_I_saw_a_furry_blur_come_flying_out_of_a_treemy_cat_44_nonfiction0501letter.mp3
-15	She landed right on my lap and meowed at my dog.	고양이는 내 무릎 위에 떨어져 개를 보고 야옹했어.	P3	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/045_She_landed_right_on_my_lap_and_meowed_at_my_dog_45_nonfiction0501letter.mp3
-16	For a moment it was chaos, but somehow, everything calmed down again.	잠깐은 엉망이었지만 금세 다시 조용해졌어.	P3	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/046_For_a_moment_it_was_chaos_but_somehow_everything_calmed_down_again_46_nonfiction0501letter.mp3
-17	The dog lay by my feet, the cat purred in the back, and I began to row once more.	개는 발 옆에 누워 있고, 고양이는 뒤에서 가르릉거렸어. 난 다시 노를 저었지.	P3	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/047_The_dog_lay_by_my_feet_the_cat_purred_in_the_back_and_I_began_to_row_once_more_47_nonfiction0501letter.mp3
-18	The river looked smooth like glass, and I felt peaceful.	강물은 유리처럼 잔잔했고, 마음은 고요했어.	P3	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/048_The_river_looked_smooth_like_glass_and_I_felt_peaceful_48_nonfiction0501letter.mp3
-19	Then, Lucy, guess what happened next?	그런데 루시, 그다음에 무슨 일이 있었는지 알아?	P4	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/049_Then_Lucy_guess_what_happened_next_49_nonfiction0501letter.mp3
-20	A shadow passed over me. I looked up, and my duck was flying above the boat.	내 위로 그림자가 지나가길래 위를 보니, 내 오리가 배 위를 날고 있었어.	P4	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/050_A_shadow_passed_over_me_I_looked_up_and_my_duck_was_flying_above_the_boat_50_nonfiction0501letter.mp3
-21	He quacked twice and landed right on my head!	오리가 두 번 꽥 울더니 내 머리 위에 내려앉았어!	P4	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/051_He_quacked_twice_and_landed_right_on_my_head_51_nonfiction0501letter.mp3
-22	The cat yowled, the dog barked, and I yelled, “Sit down!”	고양이는 울고, 개는 짖고, 나는 “앉아!” 하고 소리쳤어.	P4	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/052_The_cat_yowled_the_dog_barked_and_I_yelled_Sit_down_52_nonfiction0501letter.mp3
-23	I had to push the duck to the front so I could see again.	다시 앞을 보려고 오리를 배 앞쪽으로 밀었지.	P4	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/053_I_had_to_push_the_duck_to_the_front_so_I_could_see_again_53_nonfiction0501letter.mp3
-24	I thought that would be the end of it, but the boat was starting to feel heavy.	이제 끝났겠지 싶었는데, 배가 점점 무거워지기 시작했어.	P4	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/054_I_thought_that_would_be_the_end_of_it_but_the_boat_was_starting_to_feel_heavy_54_nonfiction0501letter.mp3
-25	I was just beginning to enjoy the sunshine when my pig and goat showed up at the riverbank.	햇살을 즐기고 있던 순간, 돼지와 염소가 강둑에 나타났어.	P5	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/055_I_was_just_beginning_to_enjoy_the_sunshine_when_my_pig_and_goat_showed_up_at_the_riverbank_55_nonfiction0501letter.mp3
-26	The pig gave me a look like he wanted a ride, and before I could stop him, he splashed right in.	돼지가 타고 싶다는 눈빛을 보내더니, 내가 말리기도 전에 물에 첨벙 뛰어들었어.	P5	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/056_The_pig_gave_me_a_look_like_he_wanted_a_ride_and_before_I_could_stop_him_he_splashed_right_in_56_nonfiction0501letter.mp3
-27	The water rocked so much that I thought we’d tip over.	물결이 너무 흔들려서 배가 뒤집히는 줄 알았어.	P5	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/057_The_water_rocked_so_much_that_I_thought_wed_tip_over_57_nonfiction0501letter.mp3
-28	I told him to stay under the seat, but then—can you believe it?—the goat jumped in too!	돼지더러 의자 밑에 있으라 했는데, 믿기 어렵겠지만 염소도 뛰어들었어!	P5	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/058_I_told_him_to_stay_under_the_seat_but_thencan_you_believe_itthe_goat_jumped_in_too_58_nonfiction0501letter.mp3
-29	There we were: me, my dog, my cat, my duck, my pig, and my goat, all in one little boat.	나, 개, 고양이, 오리, 돼지, 염소까지 한 배에 있었지.	P6	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/059_There_we_were_me_my_dog_my_cat_my_duck_my_pig_and_my_goat_all_in_one_little_boat_59_nonfiction0501letter.mp3
-30	The noise was terrible, and water was spilling over the sides.	소음이 엄청났고 물이 배 안으로 넘쳤어.	P6	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/060_The_noise_was_terrible_and_water_was_spilling_over_the_sides_60_nonfiction0501letter.mp3
-31	My cat hates water, so she jumped up on my shoulders.	고양이는 물을 싫어해서 내 어깨 위로 올라왔어.	P6	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/061_My_cat_hates_water_so_she_jumped_up_on_my_shoulders_61_nonfiction0501letter.mp3
-32	I shouted, “We’re going to sink!”	나는 “우리 가라앉겠어!” 하고 외쳤어.	P6	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/062_I_shouted_Were_going_to_sink_62_nonfiction0501letter.mp3
-33	The moment I said that, all the animals jumped overboard and swam to the riverbank.	그 말을 하자마자 모든 동물들이 물에 뛰어들어 강둑으로 헤엄쳤어.	P7	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/063_The_moment_I_said_that_all_the_animals_jumped_overboard_and_swam_to_the_riverbank_63_nonfiction0501letter.mp3
-34	The boat rose up again, light as a leaf.	배는 다시 잎사귀처럼 가볍게 떠올랐어.	P7	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/064_The_boat_rose_up_again_light_as_a_leaf_64_nonfiction0501letter.mp3
-35	I sat there laughing, watching them climb out of the water, dripping wet but happy.	나는 웃으며 젖은 동물들이 강둑으로 올라오는 걸 봤어.	P7	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/065_I_sat_there_laughing_watching_them_climb_out_of_the_water_dripping_wet_but_happy_65_nonfiction0501letter.mp3
-36	My cat stayed with me, purring on my shoulder while I started to row again.	내 고양이는 어깨 위에서 가르릉거리며 남아 있었고, 나는 다시 노를 저었어.	P7	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/066_My_cat_stayed_with_me_purring_on_my_shoulder_while_I_started_to_row_again_66_nonfiction0501letter.mp3
-37	I sang softly, “I row, row, row my boat,” and the sound of my voice echoed off the trees.	나는 부드럽게 노래했어. “노를 저어요, 저어요, 저어요.” 내 목소리가 나무들 사이로 울렸어.	P7	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/067_I_sang_softly_I_row_row_row_my_boat_and_the_sound_of_my_voice_echoed_off_the_trees_67_nonfiction0501letter.mp3
-38	But Lucy, that’s not the part that stayed in my heart.	그런데 루시, 내 마음에 남은 건 그게 아니야.	P8	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/068_But_Lucy_thats_not_the_part_that_stayed_in_my_heart_68_nonfiction0501letter.mp3
-39	The funny part ended quickly, but what I felt after was different.	웃긴 일은 금방 끝났지만, 그 뒤의 느낌은 달랐어.	P8	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/069_The_funny_part_ended_quickly_but_what_I_felt_after_was_different_69_nonfiction0501letter.mp3
-40	When the river became quiet again and the only sound was the dip of the oars, I began to think.	강이 다시 고요해지고 노가 물에 닿는 소리만 들리자, 생각이 들었어.	P8	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/070_When_the_river_became_quiet_again_and_the_only_sound_was_the_dip_of_the_oars_I_began_to_think_70_nonfiction0501letter.mp3
-41	Maybe life is a lot like rowing a boat.	인생은 배를 젓는 것과 비슷한지도 몰라.	P8	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/071_Maybe_life_is_a_lot_like_rowing_a_boat_71_nonfiction0501letter.mp3
-42	You start off alone, and one by one, things jump in—friends, surprises, even a few troubles.	처음엔 혼자 시작하지만, 하나씩 친구나 놀라운 일, 가끔은 걱정거리도 타게 되지.	P8	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/072_You_start_off_alone_and_one_by_one_things_jump_infriends_surprises_even_a_few_troubles_72_nonfiction0501letter.mp3
-43	The boat shakes, you laugh, you fall, but you keep rowing because that’s what keeps you going forward.	배가 흔들리고 웃다가 넘어져도, 앞으로 나아가려면 계속 노를 젓는 거야.	P8	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/073_The_boat_shakes_you_laugh_you_fall_but_you_keep_rowing_because_thats_what_keeps_you_going_forward_73_nonfiction0501letter.mp3
-44	I think about how beautiful everything looked: the sunlight on the water, the smell of the trees, the way the air moved.	모든 게 얼마나 아름다웠는지 생각났어. 햇살, 나무 냄새, 바람의 움직임까지.	P9	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/074_I_think_about_how_beautiful_everything_looked_the_sunlight_on_the_water_the_smell_of_the_trees_the_way_the_air_moved_74_nonfiction0501letter.mp3
-45	It felt like the world was smiling at me.	세상이 나에게 웃고 있는 것 같았어.	P9	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/075_It_felt_like_the_world_was_smiling_at_me_75_nonfiction0501letter.mp3
-46	For a while, I forgot everything else.	잠시 동안은 다른 모든 걸 잊었어.	P9	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/076_For_a_while_I_forgot_everything_else_76_nonfiction0501letter.mp3
-47	I didn’t worry about school or chores or even muddy paws on my clothes.	학교 일이나 집안일, 옷에 묻은 발자국도 신경 쓰이지 않았어.	P9	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/077_I_didnt_worry_about_school_or_chores_or_even_muddy_paws_on_my_clothes_77_nonfiction0501letter.mp3
-48	I just felt happy to be part of something so alive.	살아 있는 세상의 한 부분이라는 게 그저 행복했어.	P9	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/078_I_just_felt_happy_to_be_part_of_something_so_alive_78_nonfiction0501letter.mp3
-49	Lucy, when you visit next time, let’s go to the river together.	루시, 다음에 놀러오면 우리 같이 강으로 가자.	P10	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/079_Lucy_when_you_visit_next_time_lets_go_to_the_river_together_79_nonfiction0501letter.mp3
-50	I’ll take you in my rowboat.	내 노 젓는 배에 태워줄게.	P10	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/080_Ill_take_you_in_my_rowboat_80_nonfiction0501letter.mp3
-51	We can bring sandwiches and lemonade.	샌드위치랑 레모네이드를 챙겨 가자.	P10	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/081_We_can_bring_sandwiches_and_lemonade_81_nonfiction0501letter.mp3
-52	Maybe the animals will follow again, or maybe they’ll just watch from the riverbank.	아마 동물들이 또 따라오거나, 강둑에서 구경만 할지도 몰라.	P10	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/082_Maybe_the_animals_will_follow_again_or_maybe_theyll_just_watch_from_the_riverbank_82_nonfiction0501letter.mp3
-53	Either way, I want you to feel what I felt—the peace, the laughter, and the little bit of magic that hides in a summer day.	어쨌든 네가 내가 느꼈던 걸 느꼈으면 좋겠어—평화, 웃음, 그리고 여름날의 작은 마법을.	P10	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/083_Either_way_I_want_you_to_feel_what_I_feltthe_peace_the_laughter_and_the_little_bit_of_magic_that_hides_in_a_summer_day_83_nonfiction0501letter.mp3
-54	Your friend always,	언제나 네 친구,	P11	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/084_Your_friend_always_84_nonfiction0501letter.mp3
-55	Will	윌이 드림	P11	https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/085_Will_85_nonfiction0501letter.mp3
+/* 손글씨 연습 섹션의 문장 번호(윗첨자) 링크 스타일 */
+.handwriting-paragraph sup a {
+text-decoration: none;
+color: #1E93AB;
+font-weight: normal;
+font-size: 0.7em;
+vertical-align: super;
+margin-right: 5px;
+}
 
 
+/* Gemini Features Styles (Keep for structure, but delete AI-related content) */
+.modal {
+display: none;
+position: fixed;
+z-index: 2000;
+left: 0;
+top: 0;
+width: 100%;
+height: 100%;
+overflow: auto;
+background-color: rgba(0,0,0,0.6);
+animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+from { opacity: 0; }
+to { opacity: 1; }
+}
+
+.modal-content {
+background-color: #fefefe;
+margin: 10% auto;
+padding: 25px;
+border: 1px solid #888;
+width: 90%;
+max-width: 600px;
+border-radius: 10px;
+box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+position: relative;
+animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+from { transform: translateY(-50px); opacity: 0; }
+to { transform: translateY(0); opacity: 1; }
+}
+
+.close-btn {
+color: #aaa;
+float: right;
+font-size: 28px;
+font-weight: bold;
+cursor: pointer;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+color: black;
+text-decoration: none;
+}
+
+/* --- Game Styles --- */
+.game-hidden {
+display: none !important;
+}
+
+.main-content-hidden {
+overflow: hidden;
+}
+
+body.main-content-hidden > :not(.game-overlay):not(#pronunciation-quest-overlay) {
+display: none;
+}
+
+.game-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+min-height: 100vh; /* Use min-height to ensure it covers the whole screen */
+background-color: #1E93AB;
+z-index: 2000;
+display: flex;
+justify-content: center;
+align-items: center;
+flex-direction: column;
+color: white;
+padding: 20px;
+box-sizing: border-box;
+}
+
+.game-intro-screen {
+text-align: center;
+}
+
+#intro-text {
+font-size: 2.5em;
+text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+animation: text-pop-in 1s ease-out;
+}
+
+@keyframes text-pop-in {
+from { transform: scale(0.5); opacity: 0; }
+to { transform: scale(1); opacity: 1; }
+}
+
+.game-intro-screen .shark-svg {
+/* 상어 크기를 3배로 확대 */
+width: 600px;
+height: 300px;
+animation: swim-across 2.5s ease-in-out;
+}
+
+@keyframes swim-across {
+from { transform: translateX(-150vw) scaleX(-1); }
+50% { transform: translateX(0) scaleX(-1); }
+to { transform: translateX(150vw) scaleX(-1); }
+}
 
 
+#game-ui {
+width: 100%;
+max-width: 800px;
+height: 100%; /* Make it fill its parent */
+display: flex;
+flex-direction: column;
+}
+
+.game-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 10px 0;
+font-size: 1.5em;
+font-weight: bold;
+}
+
+#chase-scene {
+position: relative;
+width: 100%;
+height: 100px;
+background: linear-gradient(to bottom, #1E93AB, #E62727);
+border-radius: 10px;
+overflow: hidden;
+margin: 20px 0;
+border: 3px solid white;
+}
+
+#swimmer, #shark {
+position: absolute;
+top: 50%;
+font-size: 50px;
+transition: left 0.5s linear;
+}
+
+/* 수영하는 사람 이모지 좌우 반전 및 글로우 효과 */
+#swimmer {
+left: 75%;
+transform: translateY(-50%) scaleX(-1);
+animation: swimmer-glow-blink 1.5s infinite alternate;
+}
+
+/* 상어 글로우 점멸 효과 */
+@keyframes shark-glow-blink {
+from { filter: drop-shadow(0 0 5px red) brightness(1); }
+to { filter: drop-shadow(0 0 20px red) brightness(1.5); }
+}
+
+/* 수영하는 사람 글로우 점멸 효과 */
+@keyframes swimmer-glow-blink {
+from { filter: drop-shadow(0 0 5px currentColor); }
+to { filter: drop-shadow(0 0 20px currentColor); }
+}
 
 
+#shark {
+left: 10%;
+transform: translateY(-50%) scaleX(-1);
+animation: shark-glow-blink 1.5s infinite alternate;
+}
 
+#shark .shark-svg {
+width: 120px; height: 60px; animation: none;
+}
+
+.shark-body-group {
+animation: shark-swim-anim 0.8s infinite ease-in-out;
+transform-origin: 100px 50px;
+}
+
+@keyframes shark-swim-anim {
+0%, 100% { transform: rotate(0deg); }
+50% { transform: rotate(2deg); }
+}
+
+
+#game-timer {
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+font-size: 3em;
+font-weight: bold;
+color: rgba(255, 255, 255, 0.3);
+}
+
+.game-question {
+font-size: 2.5em;
+text-align: center;
+margin: 20px 0;
+padding: 20px;
+background-color: rgba(0,0,0,0.2);
+border-radius: 10px;
+/* 발음 퀘스트 UI의 높이를 일정하게 유지하기 위해 최소 높이를 120px로 조정 */
+min-height: 120px;
+display: flex;
+justify-content: center;
+align-items: center;
+flex-grow: 1;
+}
+
+#game-answers {
+display: grid;
+grid-template-columns: repeat(2, 1fr);
+gap: 15px;
+flex-grow: 1;
+}
+
+.answer-option {
+background-color: white;
+color: #333;
+border-radius: 10px;
+display: flex;
+justify-content: center;
+align-items: center;
+font-size: 1.5em;
+font-weight: bold;
+cursor: pointer;
+transition: transform 0.2s, background-color 0.2s;
+padding: 15px;
+text-align: center;
+}
+
+.answer-option:hover {
+transform: scale(1.05);
+}
+
+.answer-option.correct { background-color: #1E93AB !important; color: white; }
+.answer-option.incorrect { background-color: #E62727 !important; color: white; }
+.answer-option.no-click { pointer-events: none; }
+
+
+.game-result-screen {
+text-align: center;
+}
+
+.game-result-screen h2 {
+font-size: 3em;
+color: #1E93AB;
+border: none;
+}
+
+.game-result-screen p {
+font-size: 1.5em;
+}
+
+
+/* --- Pronunciation Quest Styles (Refactored to be TTS-Free) */
+#pronunciation-quest-overlay {
+background: linear-gradient(135deg, #1E93AB 0%, #E62727 100%);
+}
+
+#king-character {
+font-size: 150px;
+animation: king-bob 2s infinite ease-in-out;
+}
+
+@keyframes king-bob {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(-15px); }
+}
+
+#king-dialogue {
+background-color: #fff;
+color: #333;
+padding: 20px;
+border-radius: 15px;
+font-size: 1.5em;
+margin-top: 20px;
+max-width: 500px;
+position: relative;
+box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+#king-dialogue::after {
+content: '';
+position: absolute;
+top: -15px;
+left: 50%;
+transform: translateX(-50%);
+border-width: 0 15px 15px 15px;
+border-style: solid;
+border-color: transparent transparent #fff transparent;
+}
+
+.quest-btn {
+background-color: #1E93AB;
+color: #fff;
+padding: 15px 30px;
+font-size: 1.2em;
+border-radius: 30px;
+border: none;
+cursor: pointer;
+font-weight: bold;
+margin-top: 20px;
+transition: transform 0.2s;
+}
+
+.quest-btn:hover {
+transform: scale(1.1);
+}
+
+#quest-scene {
+position: relative;
+width: 100%;
+min-height: 130px;
+margin: 20px 0;
+background-image: url('https://www.transparenttextures.com/patterns/dark-forest.png'), linear-gradient(to top, #DCDCDC, #1E93AB);
+border-radius: 15px;
+overflow: hidden;
+}
+
+#guardian, #monster {
+position: absolute;
+font-size: 75px;
+top: 50%;
+transform: translateY(-50%);
+transition: all 0.5s ease-in-out;
+}
+
+#guardian.sparkling {
+animation: sparkle 0.5s;
+}
+
+@keyframes sparkle {
+0%, 100% { text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #1E93AB; }
+50% { text-shadow: 0 0 20px #fff, 0 0 30px #1E93AB, 0 0 40px #1E93AB; }
+}
+
+#monster {
+left: 80%;
+transform: translateY(-50%) scaleX(-1);
+}
+
+.attack-effect {
+position: absolute;
+top: 50%;
+font-size: 62.5px;
+opacity: 0;
+pointer-events: none;
+}
+
+#guardian-attack {
+left: 25%;
+transform: translateY(-50%);
+}
+
+#monster-attack {
+left: 75%;
+transform: translateY(-50%);
+}
+
+@keyframes monster-attack-anim {
+0% { transform: translate(0, -50%) scale(0.5) scaleX(-1); opacity: 1; }
+100% { transform: translate(-250%, -50%) scale(1.5) scaleX(-1); opacity: 0; }
+}
+
+
+/* TTS 기능 제거로 인해 마이크 버튼 역할 변경 */
+#quest-mic-btn {
+width: 100px;
+height: 100px;
+background-color: #E62727;
+border-radius: 50%;
+display: flex;
+justify-content: center;
+align-items: center;
+font-size: 60px;
+cursor: pointer;
+margin: 20px auto;
+transition: all 0.2s;
+border: 5px solid white;
+}
+
+#quest-mic-btn:hover {
+background-color: #1E93AB;
+}
+
+/* TTS 애니메이션 스타일 제거 */
+
+
+#quest-feedback-area {
+min-height: 120px;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+}
+
+#quest-feedback {
+font-size: 1.5em;
+font-weight: bold;
+}
+
+.feedback-success { color: #1E93AB; }
+.feedback-fail { color: #E62727; }
+
+#quest-controls {
+display: flex;
+gap: 20px;
+margin-top: 10px;
+}
+
+.ox-btn {
+width: 70px; height: 70px; border-radius: 50%; font-size: 2em;
+}
+
+#quest-correct-btn { background-color: #1E93AB; color: white; }
+#quest-incorrect-btn { background-color: #E62727; color: white; }
+
+#quest-message-box {
+background-color: rgba(0,0,0,0.4);
+padding: 10px 15px;
+border-radius: 10px;
+font-size: 1.1em;
+text-align: center;
+margin-bottom: 15px;
+border: 2px solid rgba(255,255,255,0.5);
+}
+
+/* AI Modal Styles (Quiz/Writing Tip) */
+#gemini-modal {
+display: none;
+position: fixed;
+z-index: 2000;
+left: 0;
+top: 0;
+width: 100%;
+height: 100%;
+overflow: auto;
+background-color: rgba(0,0,0,0.6);
+}
+.loader {
+border: 5px solid #DCDCDC;
+border-radius: 50%;
+border-top: 5px solid #1E93AB;
+width: 40px;
+height: 40px;
+animation: spin 1s linear infinite;
+margin: 20px auto;
+}
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+
+
+</style>
+
+</head>
+
+<body>
+
+<h1><span style="font-size: 150%;">Teacher Jack's</span> <br>Smart Learning Webapp <br><small>( Letter to Lucy (Row Your Boat) )</small></h1>
+
+<div class="main-controls">
+<div class="control-btn-group">
+<button id="home-btn" class="control-btn">🏠 홈</button>
+<button id="pronunciation-quest-btn" class="control-btn">발음 퀘스트</button>
+<button id="sentence-learning-btn" class="control-btn">문장학습</button>
+<button id="writing-practice-btn" class="control-btn">쓰기학습</button>
+
+<div class="test-type-control">
+<span>한글</span>
+<label class="switch">
+<input type="checkbox" id="test-type-toggle" title="시험 종류 전환 (한글/영어)">
+<span class="slider round"></span>
+</label>
+<span>영어</span>
+</div>
+<button id="test-mode-btn" class="control-btn">시험보기</button>
+<span id="timer" style="font-weight: bold; margin-left: 10px; color: #E62727; min-width: 50px; text-align: center;"></span>
+</div>
+<!-- 학습 시간 카운터를 상단 메뉴바에 추가 -->
+<span id="learning-timer-display" style="font-weight: bold; color: #1E93AB; min-width: 60px; text-align: right;">00:00</span>
+</div>
+
+
+<div class="table-header">
+<h2>단어 (Words)</h2>
+<div class="test-type-control">
+<span>KOR</span>
+<label class="switch">
+<input type="checkbox" id="word-game-test-type-toggle" title="게임 종류 전환 (한글/영어)">
+<span class="slider round"></span>
+</label>
+<span>ENG</span>
+</div>
+<button id="word-game-btn" class="control-btn">단어게임</button>
+<span id="word-game-score-display" class="game-hidden"></span>
+</div>
+
+<table id="word-table">
+<thead>
+<tr>
+<th class="font-10">순서</th>
+<th class="font-10">체크</th>
+<th class="font-10">IMAGE</th>
+<th class="font-10">단어 <label class="switch"><input type="checkbox" id="toggle-word-col"><span class="slider round"></span></label></th>
+<th class="font-10">뜻 <label class="switch"><input type="checkbox" id="toggle-word-meaning-col"><span class="slider round"></span></label></th>
+<!-- 새로 추가된 '듣기' 열 -->
+<th class="font-10">듣기 🗣️</th>
+<th class="font-10">반복 <span id="reset-word-repeat" class="clickable" style="font-size: 0.7em;" title="반복 횟수 초기화">♻️</span></th>
+<!-- '문장' 열 제거됨 -->
+</tr>
+</thead>
+<tbody>
+<!-- Word rows will be inserted here by JavaScript -->
+</tbody>
+</table>
+
+<div class="table-header">
+<h2>문장 (Sentences)</h2>
+<div class="test-type-control">
+<span>KOR</span>
+<label class="switch">
+<input type="checkbox" id="sentence-game-test-type-toggle" title="게임 종류 전환 (한글/영어)">
+<span class="slider round"></span>
+</label>
+<span>ENG</span>
+</div>
+<button id="sentence-game-btn" class="control-btn">문장게임</button>
+<span id="sentence-game-score-display" class="game-hidden"></span>
+</div>
+
+<table id="sentence-table">
+<thead>
+<tr>
+<th class="font-10">순서</th>
+<th class="font-10">체크</th>
+<th class="font-10">IMAGE</th>
+<th class="font-10">문장 <label class="switch"><input type="checkbox" id="toggle-sentence-col"><span class="slider round"></span></label></th>
+<th class="font-10">뜻 <label class="switch"><input type="checkbox" id="toggle-sentence-meaning-col"><span class="slider round"></span></label></th>
+<!-- 새로 추가된 '듣기' 열 -->
+<th class="font-10">듣기 🗣️</th>
+<th class="font-10">반복 <span id="reset-sentence-repeat" class="clickable" style="font-size: 0.7em;" title="반복 횟수 초기화">♻️</span></th>
+</tr>
+</thead>
+<tbody>
+<!-- Sentence rows will be inserted here by JavaScript -->
+</tbody>
+</table>
+
+
+<!-- 손글씨 연습을 위한 섹션 추가 -->
+<section id="writing-practice-section" class="practice-section">
+<h2>손글씨 연습 (Handwriting Practice) </h2>
+<div id="writing-paragraphs">
+<!-- Paragraphs will be inserted here by JS -->
+</div>
+</section>
+
+<!-- Cursive Practice Section -->
+<section id="cursive-practice-section" class="practice-section">
+<h2>필기체연습 (Cursive Practice)</h2>
+<div id="cursive-paragraphs">
+<!-- Paragraphs will be inserted here by JS -->
+</div>
+</section>
+
+<!-- '돌아가기' 버튼 -->
+<button id="back-btn" title="방금 본 문장으로 돌아가기">↩️</button>
+
+
+<!-- Word Game Area -->
+<div id="game-overlay" class="game-overlay game-hidden">
+<div id="game-intro-screen" class="game-intro-screen game-hidden">
+<svg id="intro-shark" viewBox="0 0 200 100" class="shark-svg">
+<g class="shark-body-group">
+<path class="shark-tail" d="M160,50 C190,20 190,80 160,50" fill="#DCDCDC"></path>
+<path class="shark-body" d="M20,50 C50,20 150,20 160,50 C150,80 50,80 20,50" fill="#DCDCDC"></path>
+<path class="shark-fin" d="M90,22 C100,10 120,10 110,22 L100,50 Z" fill="#DCDCDC"></path>
+<path class="shark-belly" d="M25,50 C50,65 140,65 160,50 C140,55 50,55 25,50" fill="#F3F2EC"></path>
+</g>
+<circle cx="45" cy="45" r="4" fill="#E62727"></circle>
+<path d="M30,52 L35,56 L40,52 L45,56 L50,52" stroke="#fff" stroke-width="2" fill="none"></path>
+</svg>
+<h2 id="intro-text">상어가 나타났다!!!<br>도망가!!!</h2>
+</div>
+
+<div id="game-ui" class="game-ui game-hidden">
+<div id="game-header">
+<div id="game-score">Score: 0</div>
+<button id="exit-game-btn" class="control-btn">나가기</button>
+</div>
+<div id="game-progress" style="font-size: 30pt; color: #DCDCDC; text-align: center;">1 / 9</div>
+<div id="chase-scene">
+<div id="swimmer">🏊</div>
+<div id="shark">
+<svg viewBox="0 0 200 100" class="shark-svg">
+<g class="shark-body-group">
+<path class="shark-tail" d="M160,50 C190,20 190,80 160,50" fill="#DCDCDC"></path>
+<path class="shark-body" d="M20,50 C50,20 150,20 160,50 C150,80 50,80 20,50" fill="#DCDCDC"></path>
+<path class="shark-fin" d="M90,22 C100,10 120,10 110,22 L100,50 Z" fill="#DCDCDC"></path>
+<path class="shark-belly" d="M25,50 C50,65 140,65 160,50 C140,55 50,55 25,50" fill="#F3F2EC"></path>
+</g>
+<circle cx="45" cy="45" r="3" fill="#E62727"></circle>
+<path d="M30,52 L35,56 L40,52 L45,56 L50,52" stroke="#fff" stroke-width="1.5" fill="none"></path>
+</svg>
+</div>
+<div id="game-timer">8</div>
+</div>
+<!-- NEW: 게임 모드 오디오 버튼 -->
+<div id="game-controls-audio" style="display: flex; justify-content: center; margin-bottom: 20px;">
+    <button id="game-audio-btn" class="control-btn" style="padding: 10px 20px; font-size: 1.2em; display: none;">
+        🔊 듣기
+    </button>
+</div>
+<!-- END NEW -->
+<div id="game-question" class="game-question">word</div>
+<div id="game-answers">
+<div class="answer-option" data-color="red"></div>
+<div class="answer-option" data-color="blue"></div>
+<div class="answer-option" data-color="yellow"></div>
+<div class="answer-option" data-color="green"></div>
+</div>
+</div>
+
+<div id="game-result-screen" class="game-result-screen game-hidden">
+<h2 id="game-result-title">게임 종료!</h2>
+<p>최종 점수: <span id="final-score">0</span>점</p>
+<button id="return-to-main-btn" class="control-btn">돌아가기</button>
+</div>
+</div>
+
+
+<!-- Pronunciation Quest Game Area -->
+<div id="pronunciation-quest-overlay" class="game-overlay game-hidden">
+<div id="quest-king-screen" class="game-intro-screen game-hidden">
+<div id="king-character">👑</div>
+<div id="king-dialogue">
+<p id="king-speech-bubble"></p>
+</div>
+<button id="accept-quest-btn" class="quest-btn">퀘스트 수락!</button>
+</div>
+
+<div id="quest-ui" class="game-ui game-hidden">
+<div id="quest-header" class="game-header">
+<div id="quest-progress">잡은 몬스터 수: 0/6</div>
+<button id="exit-quest-btn" class="control-btn">나가기</button>
+</div>
+<div id="quest-message-box">
+몬스터 이름(단어)을 소리 내어 읽고, 아래 버튼을 눌러 스스로 발음을 확인하세요.
+</div>
+<div id="quest-scene">
+<div id="guardian">🧙‍♂️</div>
+<div id="monster">🐲</div>
+<div id="guardian-attack" class="attack-effect">✨</div>
+<div id="monster-attack" class="attack-effect">💥</div>
+</div>
+<div id="quest-word-display" class="game-question">Word</div>
+<!-- TTS 기능 제거로 인해 역할 변경: 발음 확인 후 O/X 버튼 노출 -> 이제 오디오 재생 -->
+<button id="quest-mic-btn" title="단어 듣기">🔍</button>
+<div id="quest-feedback-area">
+<div id="quest-feedback"></div>
+<div id="quest-controls" class="game-hidden">
+<!-- O: 발음 맞음, X: 발음 틀림 (스스로 평가) -->
+<button id="quest-correct-btn" class="quest-btn ox-btn" title="발음 성공 (O)">O</button>
+<button id="quest-incorrect-btn" class="quest-btn ox-btn" title="발음 실패 (X)">X</button>
+</div>
+</div>
+</div>
+
+<div id="quest-result-screen" class="game-result-screen game-hidden">
+<h2 id="quest-result-title">게임 종료!</h2>
+<p>최종 점수: <span id="final-quest-score">0</span>점</p>
+<button id="return-to-main-from-quest-btn" class="control-btn">돌아가기</button>
+</div>
+
+<div id="gemini-modal" class="modal">
+<div class="modal-content">
+<span class="close-btn">×</span>
+<div id="modal-content-area">
+<!-- AI 퀴즈 또는 다른 기능 영역 (TTS 제거 후 구조만 남김) -->
+<div id="quiz-container">
+<div id="quiz-question"></div>
+<ul id="quiz-options" class="quiz-options"></ul>
+<div id="quiz-feedback"></div>
+</div>
+</div>
+</div>
+</div>
+
+
+<script>
+// ===================================================================================
+// 데이터 영역 (업데이트됨)
+// ===================================================================================
+
+const sentenceData = [
+	{ num: 1, eng: "Dear Lucy,", kor: "루시에게,", paragraph: "P1", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/031_Dear_Lucy_31_nonfiction0501letter.mp3" },
+	{ num: 2, eng: "It was the best and strangest day I have ever had on the river.", kor: "오늘은 강에서 보낸 날 중 가장 멋지고 이상한 하루였어.", paragraph: "P1", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/032_It_was_the_best_and_strangest_day_I_have_ever_had_on_the_river_32_nonfiction0501letter.mp3" },
+	{ num: 3, eng: "I just have to tell you everything that happened because I still can’t stop smiling about it.", kor: "무슨 일이 있었는지 꼭 말해주고 싶어. 아직도 웃음이 멈추질 않아.", paragraph: "P1", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/033_I_just_have_to_tell_you_everything_that_happened_because_I_still_can’t_stop_smiling_about_it_33_nonfiction0501letter.mp3" },
+	{ num: 4, eng: "You know my little rowboat, the one Father painted blue last spring?", kor: "아빠가 지난봄에 파란색으로 칠해준 내 조그만 노 젓는 배 기억나지?", paragraph: "P1", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/034_You_know_my_little_rowboat_the_one_Father_painted_blue_last_spring_34_nonfiction0501letter.mp3" },
+	{ num: 5, eng: "I took it down to the river this morning.", kor: "오늘 아침 그걸 강으로 가져갔어.", paragraph: "P1", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/035_I_took_it_down_to_the_river_this_morning_35_nonfiction0501letter.mp3" },
+	{ num: 6, eng: "The sun was bright, the sky was blue, and the breeze felt soft and warm on my face.", kor: "햇살이 밝고 하늘은 파랗고, 바람이 얼굴에 부드럽게 닿았어.", paragraph: "P1", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/036_The_sun_was_bright_the_sky_was_blue_and_the_breeze_felt_soft_and_warm_on_my_face_36_nonfiction0501letter.mp3" },
+	{ num: 7, eng: "I thought it would be a quiet ride. I was wrong!", kor: "조용한 시간일 거라 생각했는데, 완전 틀렸어!", paragraph: "P1", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/037_I_thought_it_would_be_a_quiet_ride_I_was_wrong_37_nonfiction0501letter.mp3" },
+	{ num: 8, eng: "At first, I pushed the boat into the water and started to row all by myself.", kor: "처음에는 배를 밀어 넣고 혼자 노를 젓기 시작했어.", paragraph: "P2", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/038_At_first_I_pushed_the_boat_into_the_water_and_started_to_row_all_by_myself_38_nonfiction0501letter.mp3" },
+	{ num: 9, eng: "The water made small ripples, and I sang my favorite song, “I row, row, row my boat.”", kor: "물결이 잔잔하게 일었고, 나는 “노를 저어요, 저어요, 저어요” 노래를 불렀지.", paragraph: "P2", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/039_The_water_made_small_ripples_and_I_sang_my_favorite_song_I_row_row_row_my_boat_39_nonfiction0501letter.mp3" },
+	{ num: 10, eng: "It felt so good to hear the oars dip into the water.", kor: "노가 물에 닿는 소리가 참 기분 좋았어.", paragraph: "P2", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/040_It_felt_so_good_to_hear_the_oars_dip_into_the_water_40_nonfiction0501letter.mp3" },
+	{ num: 11, eng: "Then, out of nowhere, my dog came running along the riverbank, barking like he was calling me.", kor: "그런데 갑자기 개가 강둑을 따라 달려오면서 마치 나를 부르는 듯이 짖었어.", paragraph: "P2", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/041_Then_out_of_nowhere_my_dog_came_running_along_the_riverbank_barking_like_he_was_calling_me_41_nonfiction0501letter.mp3" },
+	{ num: 12, eng: "Before I could say a word, he jumped right into the boat and licked my face.", kor: "내가 뭐라 말하기도 전에 배에 뛰어들어 얼굴을 핥았어.", paragraph: "P2", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/042_Before_I_could_say_a_word_he_jumped_right_into_the_boat_and_licked_my_face_42_nonfiction0501letter.mp3" },
+	{ num: 13, eng: "I laughed so hard I almost dropped an oar.", kor: "너무 웃겨서 노를 떨어뜨릴 뻔했지.", paragraph: "P2", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/043_I_laughed_so_hard_I_almost_dropped_an_oar_43_nonfiction0501letter.mp3" },
+	{ num: 14, eng: "Just when the boat stopped rocking, I saw a furry blur come flying out of a tree—my cat!", kor: "배가 겨우 멈췄을 때, 나무에서 털복숭이 뭔가가 날아왔어—내 고양이였어!", paragraph: "P3", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/044_Just_when_the_boat_stopped_rocking_I_saw_a_furry_blur_come_flying_out_of_a_treemy_cat_44_nonfiction0501letter.mp3" },
+	{ num: 15, eng: "She landed right on my lap and meowed at my dog.", kor: "고양이는 내 무릎 위에 떨어져 개를 보고 야옹했어.", paragraph: "P3", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/045_She_landed_right_on_my_lap_and_meowed_at_my_dog_45_nonfiction0501letter.mp3" },
+	{ num: 16, eng: "For a moment it was chaos, but somehow, everything calmed down again.", kor: "잠깐은 엉망이었지만 금세 다시 조용해졌어.", paragraph: "P3", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/046_For_a_moment_it_was_chaos_but_somehow_everything_calmed_down_again_46_nonfiction0501letter.mp3" },
+	{ num: 17, eng: "The dog lay by my feet, the cat purred in the back, and I began to row once more.", kor: "개는 발 옆에 누워 있고, 고양이는 뒤에서 가르릉거렸어. 난 다시 노를 저었지.", paragraph: "P3", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/047_The_dog_lay_by_my_feet_the_cat_purred_in_the_back_and_I_began_to_row_once_more_47_nonfiction0501letter.mp3" },
+	{ num: 18, eng: "The river looked smooth like glass, and I felt peaceful.", kor: "강물은 유리처럼 잔잔했고, 마음은 고요했어.", paragraph: "P3", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/048_The_river_looked_smooth_like_glass_and_I_felt_peaceful_48_nonfiction0501letter.mp3" },
+	{ num: 19, eng: "Then, Lucy, guess what happened next?", kor: "그런데 루시, 그다음에 무슨 일이 있었는지 알아?", paragraph: "P4", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/049_Then_Lucy_guess_what_happened_next_49_nonfiction0501letter.mp3" },
+	{ num: 20, eng: "A shadow passed over me. I looked up, and my duck was flying above the boat.", kor: "내 위로 그림자가 지나가길래 위를 보니, 내 오리가 배 위를 날고 있었어.", paragraph: "P4", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/050_A_shadow_passed_over_me_I_looked_up_and_my_duck_was_flying_above_the_boat_50_nonfiction0501letter.mp3" },
+	{ num: 21, eng: "He quacked twice and landed right on my head!", kor: "오리가 두 번 꽥 울더니 내 머리 위에 내려앉았어!", paragraph: "P4", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/051_He_quacked_twice_and_landed_right_on_my_head_51_nonfiction0501letter.mp3" },
+	{ num: 22, eng: "The cat yowled, the dog barked, and I yelled, “Sit down!”", kor: "고양이는 울고, 개는 짖고, 나는 “앉아!” 하고 소리쳤어.", paragraph: "P4", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/052_The_cat_yowled_the_dog_barked_and_I_yelled_Sit_down_52_nonfiction0501letter.mp3" },
+	{ num: 23, eng: "I had to push the duck to the front so I could see again.", kor: "다시 앞을 보려고 오리를 배 앞쪽으로 밀었지.", paragraph: "P4", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/053_I_had_to_push_the_duck_to_the_front_so_I_could_see_again_53_nonfiction0501letter.mp3" },
+	{ num: 24, eng: "I thought that would be the end of it, but the boat was starting to feel heavy.", kor: "이제 끝났겠지 싶었는데, 배가 점점 무거워지기 시작했어.", paragraph: "P4", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/054_I_thought_that_would_be_the_end_of_it_but_the_boat_was_starting_to_feel_heavy_54_nonfiction0501letter.mp3" },
+	{ num: 25, eng: "I was just beginning to enjoy the sunshine when my pig and goat showed up at the riverbank.", kor: "햇살을 즐기고 있던 순간, 돼지와 염소가 강둑에 나타났어.", paragraph: "P5", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/055_I_was_just_beginning_to_enjoy_the_sunshine_when_my_pig_and_goat_showed_up_at_the_riverbank_55_nonfiction0501letter.mp3" },
+	{ num: 26, eng: "The pig gave me a look like he wanted a ride, and before I could stop him, he splashed right in.", kor: "돼지가 타고 싶다는 눈빛을 보내더니, 내가 말리기도 전에 물에 첨벙 뛰어들었어.", paragraph: "P5", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/056_The_pig_gave_me_a_look_like_he_wanted_a_ride_and_before_I_could_stop_him_he_splashed_right_in_56_nonfiction0501letter.mp3" },
+	{ num: 27, eng: "The water rocked so much that I thought we’d tip over.", kor: "물결이 너무 흔들려서 배가 뒤집히는 줄 알았어.", paragraph: "P5", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/057_The_water_rocked_so_much_that_I_thought_we’d_tip_over_57_nonfiction0501letter.mp3" },
+	{ num: 28, eng: "I told him to stay under the seat, but then—can you believe it?—the goat jumped in too!", kor: "돼지더러 의자 밑에 있으라 했는데, 믿기 어렵겠지만 염소도 뛰어들었어!", paragraph: "P5", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/058_I_told_him_to_stay_under_the_seat_but_then—can_you_believe_it?—the_goat_jumped_in_too_58_nonfiction0501letter.mp3" },
+	{ num: 29, eng: "There we were: me, my dog, my cat, my duck, my pig, and my goat, all in one little boat.", kor: "나, 개, 고양이, 오리, 돼지, 염소까지 한 배에 있었지.", paragraph: "P6", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/059_There_we_were_me_my_dog_my_cat_my_duck_my_pig_and_my_goat_all_in_one_little_boat_59_nonfiction0501letter.mp3" },
+	{ num: 30, eng: "The noise was terrible, and water was spilling over the sides.", kor: "소음이 엄청났고 물이 배 안으로 넘쳤어.", paragraph: "P6", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/060_The_noise_was_terrible_and_water_was_spilling_over_the_sides_60_nonfiction0501letter.mp3" },
+	{ num: 31, eng: "My cat hates water, so she jumped up on my shoulders.", kor: "고양이는 물을 싫어해서 내 어깨 위로 올라왔어.", paragraph: "P6", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/061_My_cat_hates_water_so_she_jumped_up_on_my_shoulders_61_nonfiction0501letter.mp3" },
+	{ num: 32, eng: "I shouted, “We’re going to sink!”", kor: "나는 “우리 가라앉겠어!” 하고 외쳤어.", paragraph: "P6", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/062_I_shouted_We’re_going_to_sink_62_nonfiction0501letter.mp3" },
+	{ num: 33, eng: "The moment I said that, all the animals jumped overboard and swam to the riverbank.", kor: "그 말을 하자마자 모든 동물들이 물에 뛰어들어 강둑으로 헤엄쳤어.", paragraph: "P7", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/063_The_moment_I_said_that_all_the_animals_jumped_overboard_and_swam_to_the_riverbank_63_nonfiction0501letter.mp3" },
+	{ num: 34, eng: "The boat rose up again, light as a leaf.", kor: "배는 다시 잎사귀처럼 가볍게 떠올랐어.", paragraph: "P7", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/064_The_boat_rose_up_again_light_as_a_leaf_64_nonfiction0501letter.mp3" },
+	{ num: 35, eng: "I sat there laughing, watching them climb out of the water, dripping wet but happy.", kor: "나는 웃으며 젖은 동물들이 강둑으로 올라오는 걸 봤어.", paragraph: "P7", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/065_I_sat_there_laughing_watching_them_climb_out_of_the_water_dripping_wet_but_happy_65_nonfiction0501letter.mp3" },
+	{ num: 36, eng: "My cat stayed with me, purring on my shoulder while I started to row again.", kor: "내 고양이는 어깨 위에서 가르릉거리며 남아 있었고, 나는 다시 노를 저었어.", paragraph: "P7", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/066_My_cat_stayed_with_me_purring_on_my_shoulder_while_I_started_to_row_again_66_nonfiction0501letter.mp3" },
+	{ num: 37, eng: "I sang softly, “I row, row, row my boat,” and the sound of my voice echoed off the trees.", kor: "나는 부드럽게 노래했어. “노를 저어요, 저어요, 저어요.” 내 목소리가 나무들 사이로 울렸어.", paragraph: "P7", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/067_I_sang_softly_I_row_row_row_my_boat_and_the_sound_of_my_voice_echoed_off_the_trees_67_nonfiction0501letter.mp3" },
+	{ num: 38, eng: "But Lucy, that’s not the part that stayed in my heart.", kor: "그런데 루시, 내 마음에 남은 건 그게 아니야.", paragraph: "P8", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/068_But_Lucy_that’s_not_the_part_that_stayed_in_my_heart_68_nonfiction0501letter.mp3" },
+	{ num: 39, eng: "The funny part ended quickly, but what I felt after was different.", kor: "웃긴 일은 금방 끝났지만, 그 뒤의 느낌은 달랐어.", paragraph: "P8", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/069_The_funny_part_ended_quickly_but_what_I_felt_after_was_different_69_nonfiction0501letter.mp3" },
+	{ num: 40, eng: "When the river became quiet again and the only sound was the dip of the oars, I began to think.", kor: "강이 다시 고요해지고 노가 물에 닿는 소리만 들리자, 생각이 들었어.", paragraph: "P8", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/070_When_the_river_became_quiet_again_and_the_only_sound_was_the_dip_of_the_oars_I_began_to_think_70_nonfiction0501letter.mp3" },
+	{ num: 41, eng: "Maybe life is a lot like rowing a boat.", kor: "인생은 배를 젓는 것과 비슷한지도 몰라.", paragraph: "P8", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/071_Maybe_life_is_a_lot_like_rowing_a_boat_71_nonfiction0501letter.mp3" },
+	{ num: 42, eng: "You start off alone, and one by one, things jump in—friends, surprises, even a few troubles.", kor: "처음엔 혼자 시작하지만, 하나씩 친구나 놀라운 일, 가끔은 걱정거리도 타게 되지.", paragraph: "P8", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/072_You_start_off_alone_and_one_by_one_things_jump_in—friends_surprises_even_a_few_troubles_72_nonfiction0501letter.mp3" },
+	{ num: 43, eng: "The boat shakes, you laugh, you fall, but you keep rowing because that’s what keeps you going forward.", kor: "배가 흔들리고 웃다가 넘어져도, 앞으로 나아가려면 계속 노를 젓는 거야.", paragraph: "P8", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/073_The_boat_shakes_you_laugh_you_fall_but_you_keep_rowing_because_that’s_what_keeps_you_going_forward_73_nonfiction0501letter.mp3" },
+	{ num: 44, eng: "I think about how beautiful everything looked: the sunlight on the water, the smell of the trees, the way the air moved.", kor: "모든 게 얼마나 아름다웠는지 생각났어. 햇살, 나무 냄새, 바람의 움직임까지.", paragraph: "P9", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/074_I_think_about_how_beautiful_everything_looked_the_sunlight_on_the_water_the_smell_of_the_trees_the_way_the_air_moved_74_nonfiction0501letter.mp3" },
+	{ num: 45, eng: "It felt like the world was smiling at me.", kor: "세상이 나에게 웃고 있는 것 같았어.", paragraph: "P9", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/075_It_felt_like_the_world_was_smiling_at_me_75_nonfiction0501letter.mp3" },
+	{ num: 46, eng: "For a while, I forgot everything else.", kor: "잠시 동안은 다른 모든 걸 잊었어.", paragraph: "P9", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/076_For_a_while_I_forgot_everything_else_76_nonfiction0501letter.mp3" },
+	{ num: 47, eng: "I didn’t worry about school or chores or even muddy paws on my clothes.", kor: "학교 일이나 집안일, 옷에 묻은 발자국도 신경 쓰이지 않았어.", paragraph: "P9", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/077_I_didn’t_worry_about_school_or_chores_or_even_muddy_paws_on_my_clothes_77_nonfiction0501letter.mp3" },
+	{ num: 48, eng: "I just felt happy to be part of something so alive.", kor: "살아 있는 세상의 한 부분이라는 게 그저 행복했어.", paragraph: "P9", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/078_I_just_felt_happy_to_be_part_of_something_so_alive_78_nonfiction0501letter.mp3" },
+	{ num: 49, eng: "Lucy, when you visit next time, let’s go to the river together.", kor: "루시, 다음에 놀러오면 우리 같이 강으로 가자.", paragraph: "P10", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/079_Lucy_when_you_visit_next_time_let’s_go_to_the_river_together_79_nonfiction0501letter.mp3" },
+	{ num: 50, eng: "I’ll take you in my rowboat.", kor: "내 노 젓는 배에 태워줄게.", paragraph: "P10", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/080_I’ll_take_you_in_my_rowboat_80_nonfiction0501letter.mp3" },
+	{ num: 51, eng: "We can bring sandwiches and lemonade.", kor: "샌드위치랑 레모네이드를 챙겨 가자.", paragraph: "P10", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/081_We_can_bring_sandwiches_and_lemonade_81_nonfiction0501letter.mp3" },
+	{ num: 52, eng: "Maybe the animals will follow again, or maybe they’ll just watch from the riverbank.", kor: "아마 동물들이 또 따라오거나, 강둑에서 구경만 할지도 몰라.", paragraph: "P10", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/082_Maybe_the_animals_will_follow_again_or_maybe_they’ll_just_watch_from_the_riverbank_82_nonfiction0501letter.mp3" },
+	{ num: 53, eng: "Either way, I want you to feel what I felt—the peace, the laughter, and the little bit of magic that hides in a summer day.", kor: "어쨌든 네가 내가 느꼈던 걸 느꼈으면 좋겠어—평화, 웃음, 그리고 여름날의 작은 마법을.", paragraph: "P10", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/083_Either_way_I_want_you_to_feel_what_I_felt—the_peace_the_laughter_and_the_little_bit_of_magic_that_hides_in_a_summer_day_83_nonfiction0501letter.mp3" },
+	{ num: 54, eng: "Your friend always,", kor: "언제나 네 친구,", paragraph: "P11", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/084_Your_friend_always_84_nonfiction0501letter.mp3" },
+	{ num: 55, eng: "Will", kor: "윌이 드림", paragraph: "P11", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/085_Will_85_nonfiction0501letter.mp3" }
+];
+
+const wordData = [
+	{ num: 1, eng: "overboard", kor: "물밖으로, 배 밖으로", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/001_overboard_1_nonfiction0501letter.mp3" },
+	{ num: 2, eng: "riverbank", kor: "강둑", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/002_riverbank_2_nonfiction0501letter.mp3" },
+	{ num: 3, eng: "rowboat", kor: "노 젓는 배", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/003_rowboat_3_nonfiction0501letter.mp3" },
+	{ num: 4, eng: "ripples", kor: "잔물결", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/004_ripples_4_nonfiction0501letter.mp3" },
+	{ num: 5, eng: "breeze", kor: "산들바람", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/005_breeze_5_nonfiction0501letter.mp3" },
+	{ num: 6, eng: "peaceful", kor: "평화로운", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/006_peaceful_6_nonfiction0501letter.mp3" },
+	{ num: 7, eng: "quacked", kor: "(오리가) 꽥꽥 울었다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/007_quacked_7_nonfiction0501letter.mp3" },
+	{ num: 8, eng: "yowled", kor: "(고양이가) 울부짖었다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/008_yowled_8_nonfiction0501letter.mp3" },
+	{ num: 9, eng: "purr", kor: "(고양이가) 가르릉거리다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/009_purr_9_nonfiction0501letter.mp3" },
+	{ num: 10, eng: "splashed", kor: "첨벙거렸다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/010_splashed_10_nonfiction0501letter.mp3" },
+	{ num: 11, eng: "tipped over", kor: "뒤집혔다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/011_tipped_over_11_nonfiction0501letter.mp3" },
+	{ num: 12, eng: "chaos", kor: "혼란", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/012_chaos_12_nonfiction0501letter.mp3" },
+	{ num: 13, eng: "echoed", kor: "메아리쳤다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/013_echoed_13_nonfiction0501letter.mp3" },
+	{ num: 14, eng: "suddenly", kor: "갑자기", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/014_suddenly_14_nonfiction0501letter.mp3" },
+	{ num: 15, eng: "shouted", kor: "외쳤다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/015_shouted_15_nonfiction0501letter.mp3" },
+	{ num: 16, eng: "sank", kor: "가라앉았다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/016_sank_16_nonfiction0501letter.mp3" },
+	{ num: 17, eng: "steady", kor: "안정된", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/017_steady_17_nonfiction0501letter.mp3" },
+	{ num: 18, eng: "smooth", kor: "잔잔한", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/018_smooth_18_nonfiction0501letter.mp3" },
+	{ num: 19, eng: "heavy", kor: "무거운", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/019_heavy_19_nonfiction0501letter.mp3" },
+	{ num: 20, eng: "shook", kor: "흔들렸다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/020_shook_20_nonfiction0501letter.mp3" },
+	{ num: 21, eng: "nodded", kor: "고개를 끄덕였다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/021_nodded_21_nonfiction0501letter.mp3" },
+	{ num: 22, eng: "leafy", kor: "나뭇잎이 무성한", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/022_leafy_22_nonfiction0501letter.mp3" },
+	{ num: 23, eng: "whispered", kor: "속삭였다", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/023_whispered_23_nonfiction0501letter.mp3" },
+	{ num: 24, eng: "laughter", kor: "웃음", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/024_laughter_24_nonfiction0501letter.mp3" },
+	{ num: 25, eng: "troubles", kor: "걱정거리, 문제들", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/025_troubles_25_nonfiction0501letter.mp3" },
+	{ num: 26, eng: "peacefulness", kor: "고요함", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/026_peacefulness_26_nonfiction0501letter.mp3" },
+	{ num: 27, eng: "magic", kor: "마법", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/027_magic_27_nonfiction0501letter.mp3" },
+	{ num: 28, eng: "sunlight", kor: "햇살", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/028_sunlight_28_nonfiction0501letter.mp3" },
+	{ num: 29, eng: "lemonade", kor: "레모네이드", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/029_lemonade_29_nonfiction0501letter.mp3" },
+	{ num: 30, eng: "forward", kor: "앞으로, 전진하여", audioUrl: "https://github.com/Steven-ssem/nonfiction0501letter/raw/refs/heads/main/030_forward_30_nonfiction0501letter.mp3" }
+];
+
+
+// ===================================================================================
+// Firebase & Global State Management
+// ===================================================================================
+
+// Global variables provided by the Canvas environment
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+let db;
+let auth;
+let userId = null;
+let isAuthReady = false;
+
+// Local state to store Firestore data (Progress and Scores)
+let learningProgress = {}; // { 'word-1': { checked: true, repeat: 5 }, ... }
+let gameScores = { word: '0', sentence: '0', quest: '0' }; 
+
+let lastActiveSentenceId = null;
+let lastScrollY = null;
+let lastWritingPracticeY = null;
+
+// 오디오 캐시 추가: MP3 파일 URL을 키로 사용
+const audioCache = {};
+
+// Test Mode State
+let isTestMode = false;
+let timerInterval = null;
+let secondsElapsed = 0;
+
+// Game State
+let currentGameTimeLimit = 8;
+let gameTimerInterval = null;
+let gameTimeLeft = 0;
+let currentGameScore = 0;
+let currentQuestionIndex = 0;
+let shuffledData = [];
+let consecutiveWrongAnswers = 0;
+let swimmerPosition = 0;
+let sharkPosition = 0;
+let currentGameType = 'word';
+let isEngTestMode = false;
+let incorrectQueue = [];
+let difficultyPool = [];
+let difficultyPoolIndex = 0;
+let totalQuestionsTarget = 30;
+
+// Pronunciation Quest State
+const monsters = ['🐲', '👹', '👻', '👽', '👿', '🎃', '🤡', '🤖', '👾', '🐸'];
+let questWords = [];
+let questQuestionCount = 0;
+let monstersCaught = 0;
+let questScore = 0;
+
+// 학습 시간 카운터 관련 변수
+let learningTimerInterval = null;
+let learningSecondsElapsed = 0;
+let inactivityTimeout = null;
+const inactivityDuration = 20000; // 20초 (20000ms)
+
+// Word Lookup Map (for efficient and accurate linking)
+let wordLookupMap = new Map();
+
+
+// ===================================================================================
+// Firebase Initialization & Persistence Functions
+// ===================================================================================
+
+async function initializeFirebase() {
+	if (!window.firebase || !firebaseConfig) { 
+		console.error("Firebase SDK or config not found. Skipping persistence setup.");
+		isAuthReady = true;
+		updateUIFromState(); // Run update with default state
+		return;
+	}
+	
+	const { initializeApp, auth: fAuth, firestore: fFirestore } = window.firebase;
+	
+	const app = initializeApp(firebaseConfig);
+	db = fFirestore.getFirestore(app);
+	auth = fAuth.getAuth(app);
+	
+	fFirestore.setLogLevel('debug');
+
+	// 인증 (Authentication)
+	try {
+		if (initialAuthToken) {
+			await fAuth.signInWithCustomToken(auth, initialAuthToken);
+		} else {
+			await fAuth.signInAnonymously(auth);
+		}
+	} catch (error) {
+		console.error("Firebase Auth Error:", error);
+	}
+	
+	fAuth.onAuthStateChanged(auth, (user) => {
+		// 각 장치/사용자별 데이터 독립성 보장:
+		// Firestore는 고유한 사용자 ID(user.uid)를 사용하여 데이터를 저장하고 읽습니다.
+		// 각 태블릿은 고유한 세션을 가지므로, 서로의 데이터에 영향을 주지 않습니다.
+		userId = user ? user.uid : 'anonymous-user-' + crypto.randomUUID();
+		document.getElementById('learning-timer-display').title = `User ID: ${userId}`;
+		fetchProgressAndScores();
+		isAuthReady = true;
+	});
+}
+
+/**
+ * Firestore에서 학습 진행 상황 및 점수를 실시간으로 가져옵니다.
+ *
+ * NOTE: FIRESTORE (11.6.1) INTERNAL ASSERTION FAILED 오류를 해결하기 위해
+ * snapshot.docChanges() 대신 snapshot.docs를 사용하여 매번 전체 상태를 재구축합니다.
+ */
+function fetchProgressAndScores() {
+	if (!db || !userId) return;
+
+	const { collection, onSnapshot, doc } = window.firebase.firestore;
+
+	// 1. Fetch Learning Progress (Checkboxes and Repeats)
+	// Path: /artifacts/{appId}/users/{userId}/progress
+	const progressColRef = collection(db, 'artifacts', appId, 'users', userId, 'progress');
+	onSnapshot(progressColRef, (snapshot) => {
+		// Fix: Use snapshot.docs to robustly rebuild the state on every update,
+		// which helps avoid internal assertion errors related to change application.
+		const newProgress = {};
+		snapshot.docs.forEach(doc => {
+			newProgress[doc.id] = doc.data();
+		});
+		learningProgress = newProgress;
+		updateUIFromState();
+	}, (error) => {
+		console.error("Error fetching progress:", error);
+	});
+
+	// 2. Fetch Game Scores (Using a single document for simplicity)
+	// Path: /artifacts/{appId}/users/{userId}/scores/game_scores
+	const scoreDocRef = doc(db, 'artifacts', appId, 'users', userId, 'scores', 'game_scores');
+	onSnapshot(scoreDocRef, (docSnap) => {
+		if (docSnap.exists()) {
+			gameScores = { ...gameScores, ...docSnap.data() };
+		}
+		updateScoreDisplays();
+	}, (error) => {
+		console.error("Error fetching scores:", error);
+	});
+}
+
+/**
+ * Firestore에 학습 진행 상황을 저장합니다.
+ * @param {string} id 'word-1' 또는 'sentence-5'
+ * @param {object} data 저장할 데이터 ({ checked: boolean, repeat: number })
+ */
+async function saveLearningProgress(id, data) {
+	if (!db || !userId) return;
+	const { doc, setDoc } = window.firebase.firestore;
+	try {
+		const docRef = doc(db, 'artifacts', appId, 'users', userId, 'progress', id);
+		await setDoc(docRef, data, { merge: true });
+	} catch (error) {
+		console.error("Error saving progress:", id, error);
+	}
+}
+
+/**
+ * Firestore에 게임 점수를 저장합니다.
+ * @param {string} gameType 'word', 'sentence', or 'quest'
+ * @param {number} score 
+ */
+async function saveGameScore(gameType, score) {
+	if (!db || !userId) return;
+	const { doc, setDoc } = window.firebase.firestore;
+	try {
+		const docRef = doc(db, 'artifacts', appId, 'users', userId, 'scores', 'game_scores');
+		await setDoc(docRef, { [gameType]: String(score) }, { merge: true });
+	} catch (error) {
+		console.error("Error saving game score:", gameType, error);
+	}
+}
+
+
+/**
+ * Firestore 데이터 변경 시 UI를 업데이트합니다.
+ */
+function updateUIFromState() {
+	if (!isAuthReady) return; // Wait until auth/fetch has at least started
+
+	// Update tables
+	['word-table', 'sentence-table'].forEach(tableId => {
+		const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+		rows.forEach(row => {
+			const rowId = row.id;
+			const state = learningProgress[rowId] || { checked: false, repeat: 0 };
+			
+			// 1. Checkbox and Completion
+			const mainCheckbox = row.querySelector('.main-checkbox');
+			if (mainCheckbox) {
+				mainCheckbox.checked = state.checked || false;
+				row.classList.toggle('row-completed', state.checked || false);
+			}
+
+			// 2. Repeat Count
+			const repeatCell = row.querySelector('.repeat-cell');
+			if (repeatCell) {
+				repeatCell.textContent = state.repeat || '0';
+			}
+		});
+	});
+
+	updateScoreDisplays();
+}
+
+/**
+ * 점수 디스플레이를 업데이트합니다.
+ */
+function updateScoreDisplays() {
+	const wordScoreDisplay = document.getElementById('word-game-score-display');
+	const sentenceScoreDisplay = document.getElementById('sentence-game-score-display');
+	const questScore = gameScores.quest || '0';
+
+	const lastWordGameScore = gameScores.word || '0';
+	if (lastWordGameScore !== '0') {
+		wordScoreDisplay.textContent = `최근 단어게임 점수: ${lastWordGameScore}점`;
+		wordScoreDisplay.classList.remove('game-hidden');
+	}
+	
+	const lastSentenceGameScore = gameScores.sentence || '0';
+	if (lastSentenceGameScore !== '0') {
+		sentenceScoreDisplay.textContent = `최근 문장게임 점수: ${lastSentenceGameScore}점`;
+		sentenceScoreDisplay.classList.remove('game-hidden');
+	}
+
+	// Quest result will be handled in its own end screen logic
+}
+
+
+// ===================================================================================
+// 유틸리티 및 데이터 처리 함수
+// ===================================================================================
+
+/*
+* 상단 고정 바의 높이만큼 body의 padding-top을 동적으로 설정합니다.*/
+function adjustBodyPadding() {
+const mainControls = document.querySelector('.main-controls');
+if (mainControls && mainControls.offsetHeight > 0) {
+document.body.style.paddingTop = `${mainControls.offsetHeight + 20}px`;
+}
+}
+
+/*
+* 추가됨: 모든 오디오 파일을 미리 로드하여 캐시에 저장합니다. (딜레이 제거)*/
+function preloadAllAudio() {
+const allData = [...wordData, ...sentenceData];
+allData.forEach(item => {
+if (item.audioUrl && !audioCache[item.audioUrl]) {
+// Audio 객체를 생성하는 것만으로도 브라우저가 다운로드를 시작함 (preload)
+audioCache[item.audioUrl] = new Audio(item.audioUrl);
+}
+});
+}
+
+/*
+* 문장 문자열에서 단어를 찾아 하이퍼링크를 생성합니다.
+* 삭제: 문장-단어 하이퍼링크 생성 로직 제거*/
+function createLinkedSentence(sentenceText, wordLookup) {
+return sentenceText; // 원본 텍스트 반환
+}
+
+/*
+* WordData를 파싱하여 모든 변형 단어에 대한 룩업 맵을 만들고, SentenceData를 이용해 백링크를 채웁니다.*/
+function initializeWordLookupMap(wordData, sentenceData) {
+const wordLookup = new Map();
+const flatWordCandidates = [];
+
+wordData.forEach(item => {
+const slashParts = item.eng.split('/').map(p => p.trim());
+
+slashParts.forEach(part => {
+const matchOptional = part.match(/(.*)\((.*)\)(.*)/); // 괄호 포함 단어 처리 강화
+if (matchOptional) {
+const [, prefix, optional, suffix] = matchOptional;
+
+// Variant 1: With optional part (e.g., 'seasoned')
+const variantWith = (prefix + optional + suffix).trim();
+if (variantWith.length > 0 && !wordLookup.has(variantWith)) {
+wordLookup.set(variantWith, { num: item.num, kor: item.kor, sentences: [] });
+flatWordCandidates.push({ eng: variantWith, num: item.num, kor: item.kor });
+}
+
+// Variant 2: Without optional part (e.g., 'season')
+const variantWithout = (prefix + suffix).trim();
+if (variantWithout.length > 0 && !wordLookup.has(variantWithout)) {
+wordLookup.set(variantWithout, { num: item.num, kor: item.kor, sentences: [] });
+flatWordCandidates.push({ eng: variantWithout, num: item.num, kor: item.kor });
+}
+
+} else if (part.length > 0 && !wordLookup.has(part)) {
+wordLookup.set(part, { num: item.num, kor: item.kor, sentences: [] });
+flatWordCandidates.push({ eng: part, num: item.num, kor: item.kor });
+}
+});
+});
+
+// 문장의 단어와 wordData의 단어를 비교하여 역참조를 생성합니다.
+flatWordCandidates.sort((a, b) => b.eng.length - a.eng.length);
+sentenceData.forEach(sentence => {
+flatWordCandidates.forEach(wordItem => {
+// 단어 경계를 사용하여 정확히 일치하는 단어를 찾습니다.
+const pattern = wordItem.eng.replace(/([.?+^$[\]\\(){}|-])/g, "\\$1").replace(/\s+/g, "\\s+");
+const regex = new RegExp(`\\b${pattern}\\b`, 'i'); // \b를 사용하여 단어 경계 일치
+
+// 문장 텍스트에서 따옴표, 쉼표, 마침표 등을 제거하여 더 넓게 일치시킵니다.
+const cleanSentence = sentence.eng.replace(/['".,?!]/g, ' ');
+
+if (regex.test(cleanSentence)) {
+const lookupItem = wordLookup.get(wordItem.eng);
+if (lookupItem && lookupItem.sentences.indexOf(sentence.num) === -1) {
+lookupItem.sentences.push(sentence.num);
+}
+}
+});
+});
+
+return wordLookup;
+}
+
+/*
+* 테이블에 데이터를 채우는 범용 함수 (Firestore에서 로드 후 updateUIFromState 호출)*/
+function populateTable(tableId, data, isWordTable, wordLookup) {
+const tableBody = document.querySelector(`#${tableId} tbody`);
+tableBody.innerHTML = '';
+
+data.forEach(item => {
+const row = document.createElement('tr');
+const rowId = `${tableId.split('-')[0]}-${item.num}`;
+row.id = rowId;
+
+let mainContentHtml;
+
+// Check if it's the first row for highlighting the '듣기' cell
+const isFirstRow = item.num === 1;
+const listenHighlightClass = isFirstRow ? ' highlight-listen-cell' : '';
+
+if (isWordTable) {
+// 단어 테이블: 'IMAGE' 열(이전 '숨김/표시') 추가 및 기능 제거
+mainContentHtml = item.eng;
+
+// 단어 테이블 구조
+row.innerHTML = `<td class="font-10" data-label="순서">${item.num}</td>
+					 <td data-label="체크"><input type="checkbox" class="checkbox-15 main-checkbox" title="학습 완료 체크"></td>
+					 <td data-label="image-placeholder"></td>
+					 <td class="font-15 color-black clickable" data-label="단어" title="단어 보기/숨기기">${mainContentHtml}</td>
+					 <td class="font-15 clickable" data-label="뜻" title="뜻 보기/숨기기">${item.kor}</td>
+					 <td class="clickable font-30${listenHighlightClass}" data-label="듣기" title="음성 듣기">🗣️</td>
+					 <td class="repeat-cell font-30" data-label="반복">0</td>`;
+
+} else {
+// 문장 테이블: 'IMAGE' 열(이전 '숨김/표시') 추가 및 기능 제거
+mainContentHtml = item.eng;
+
+// 문장 테이블 구조
+row.innerHTML = `<td class="font-10" data-label="순서">${item.num}</td>
+					 <td data-label="체크"><input type="checkbox" class="checkbox-15 main-checkbox" title="학습 완료 체크"></td>
+					 <td data-label="image-placeholder"></td>
+					 <td class="font-15 color-black clickable" data-label="문장" title="문장 보기/숨기기">${mainContentHtml}</td>
+					 <td class="font-15 clickable" data-label="뜻" title="뜻 보기/숨기기">${item.kor}</td>
+					 <td class="clickable font-30${listenHighlightClass}" data-label="듣기" title="음성 듣기">🗣️</td>
+					 <td class="repeat-cell font-30" data-label="반복">0</td>`;
+}
+
+tableBody.appendChild(row);
+
+// Initial state will be loaded and applied by updateUIFromState after Firestore listener fires
+});
+}
+
+
+// --- 타이머 유틸리티 ---
+
+function formatTime(seconds) {
+const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+const secs = (seconds % 60).toString().padStart(2, '0');
+return `${mins}:${secs}`;
+}
+
+const timerDisplay = document.getElementById('timer');
+function startTimer() {
+if (timerInterval) clearInterval(timerInterval);
+timerInterval = setInterval(() => {
+secondsElapsed++;
+timerDisplay.textContent = formatTime(secondsElapsed);
+}, 1000);
+}
+
+function stopTimer() {
+clearInterval(timerInterval);
+secondsElapsed = 0;
+timerDisplay.textContent = '';
+}
+
+function startLearningTimer() {
+if (learningTimerInterval) return;
+learningTimerInterval = setInterval(() => {
+learningSecondsElapsed++;
+document.getElementById('learning-timer-display').textContent = formatTime(learningSecondsElapsed);
+}, 1000);
+}
+
+function stopLearningTimer() {
+clearInterval(learningTimerInterval);
+learningTimerInterval = null;
+}
+
+function resetInactivityTimer() {
+if (inactivityTimeout) {
+clearTimeout(inactivityTimeout);
+}
+startLearningTimer();
+inactivityTimeout = setTimeout(stopLearningTimer, inactivityDuration);
+}
+
+
+// ===================================================================================
+// 이벤트 핸들러
+// ===================================================================================
+
+/**
+* 오디오 재생 후 하이라이트를 다음 행으로 이동시키고, 마지막 행일 경우 첫 행으로 돌아갑니다.
+* @param {HTMLTableRowElement} currentRow 현재 행*/
+function findNextRowAndHighlight(currentRow) {
+const tableBody = currentRow.closest('tbody');
+const allRows = Array.from(tableBody.querySelectorAll('tr'));
+const currentIndex = allRows.indexOf(currentRow);
+
+// 1. 현재 행의 하이라이트 제거
+const currentListenCell = currentRow.querySelector('[data-label="듣기"]');
+currentListenCell.classList.remove('highlight-listen-cell');
+currentListenCell.classList.remove('no-pointer-events'); // 클릭 잠금 해제
+
+let nextRow;
+if (currentIndex < allRows.length - 1) {
+// 2. 다음 행으로 이동
+nextRow = allRows[currentIndex + 1];
+} else {
+// 3. 마지막 행인 경우 첫 행으로 회귀
+nextRow = allRows[0];
+}
+
+// 4. 다음 행에 하이라이트 추가
+const nextListenCell = nextRow.querySelector('[data-label="듣기"]');
+nextListenCell.classList.add('highlight-listen-cell');
+
+// 5. 요청: 새로 하이라이트된 셀로 자동 스크롤
+nextListenCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/*
+* 반복 횟수 초기화 핸들러 (Firestore 업데이트)
+* @param {string} tableId 초기화할 테이블의 ID ('word-table' 또는 'sentence-table')*/
+async function handleResetRepeatCount(tableId) {
+	if (!db || !userId) return;
+
+	const { writeBatch, doc, collection } = window.firebase.firestore;
+	const tableBody = document.querySelector(`#${tableId} tbody`);
+	if (!tableBody) return;
+	
+	const rows = tableBody.querySelectorAll('tr');
+	const prefix = tableId.split('-')[0];
+	const batch = writeBatch(db);
+	
+	rows.forEach(row => {
+		const rowId = `${prefix}-${row.id.split('-')[1]}`;
+		const repeatCell = row.querySelector('.repeat-cell');
+		
+		// Firestore 업데이트를 위한 Document Reference 생성
+		const docRef = doc(db, 'artifacts', appId, 'users', userId, 'progress', rowId);
+		
+		// Batch에 update 작업 추가
+		batch.set(docRef, { repeat: 0 }, { merge: true });
+		
+		// 화면 업데이트 (onSnapshot에서 처리되지만 즉시 피드백을 위해 임시로 업데이트)
+		repeatCell.textContent = '0';
+	});
+	
+	// Batch 실행
+	try {
+		await batch.commit();
+		// UI는 onSnapshot을 통해 최종적으로 업데이트될 것입니다.
+	} catch (error) {
+		console.error("Error resetting repeat counts:", error);
+	}
+
+	// 첫 행으로 하이라이트 재설정
+	const allRows = Array.from(rows);
+	if (allRows.length > 0) {
+		// 기존 하이라이트 제거
+		tableBody.querySelectorAll('.highlight-listen-cell').forEach(cell => {
+			cell.classList.remove('highlight-listen-cell');
+			cell.classList.remove('no-pointer-events');
+		});
+
+		// 첫 행 하이라이트 설정
+		const firstListenCell = allRows[0].querySelector('[data-label="듣기"]');
+		firstListenCell.classList.add('highlight-listen-cell');
+		firstListenCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	}
+}
+
+
+function toggleTestMode() {
+isTestMode = !isTestMode;
+const testModeBtn = document.getElementById('test-mode-btn');
+const testTypeToggle = document.getElementById('test-type-toggle');
+const elementsToHide = document.querySelectorAll('th .switch');
+const meaningCells = document.querySelectorAll('td[data-label="뜻"]');
+const sentenceCells = document.querySelectorAll('#sentence-table td[data-label="문장"]');
+const wordCells = document.querySelectorAll('#word-table td[data-label="단어"]');
+
+if (isTestMode) {
+// playStartChime(); // TTS 제거로 인해 주석 처리
+startTimer();
+testModeBtn.textContent = '시험중';
+testModeBtn.classList.add('testing');
+elementsToHide.forEach(toggle => toggle.style.display = 'none');
+
+if (testTypeToggle.checked) { // 영어 시험 (문제: 한글, 답: 영어)
+meaningCells.forEach(cell => cell.classList.remove('text-hidden'));
+sentenceCells.forEach(cell => cell.classList.add('text-hidden'));
+wordCells.forEach(cell => cell.classList.add('text-hidden'));
+} else { // 한글 시험 (문제: 영어, 답: 한글)
+meaningCells.forEach(cell => cell.classList.add('text-hidden'));
+sentenceCells.forEach(cell => cell.classList.remove('text-hidden'));
+wordCells.forEach(cell => cell.classList.remove('text-hidden'));
+}
+
+} else {
+// playEndChime(); // TTS 제거로 인해 주석 처리
+stopTimer();
+testModeBtn.textContent = '시험보기';
+testModeBtn.classList.remove('testing');
+elementsToHide.forEach(toggle => toggle.style.display = 'inline-block');
+
+// 모든 숨김 상태 해제 (시험 모드에서 강제 숨김 해제)
+meaningCells.forEach(cell => cell.classList.remove('text-hidden'));
+sentenceCells.forEach(cell => cell.classList.remove('text-hidden'));
+wordCells.forEach(cell => cell.classList.remove('text-hidden'));
+}
+}
+
+
+async function handleTableClick(e) {
+	const target = e.target;
+	const row = target.closest('tr');
+	if (!row || row.parentElement.tagName === 'THEAD') return;
+	const rowId = row.id;
+	const clickedCell = e.target.closest('td');
+	if(!clickedCell) return;
+
+	const clickedLabel = clickedCell.getAttribute('data-label');
+	const currentState = learningProgress[rowId] || { checked: false, repeat: 0 };
+
+
+	// 1. Checkbox Toggle (Firestore Update)
+	if (target.classList.contains('main-checkbox')) {
+		const isChecked = target.checked;
+		row.classList.toggle('row-completed', isChecked);
+		// Save to Firestore
+		await saveLearningProgress(rowId, { checked: isChecked });
+		return;
+	}
+
+	// 2. Word Link Click (단어표의 문장 번호 링크만 해당)
+	const wordLink = e.target.closest('a[href^="#sentence-"]');
+	if (wordLink) {
+		e.preventDefault();
+		if (row.closest('table').id !== 'word-table') return;
+		lastScrollY = window.scrollY;
+		lastActiveSentenceId = row.id;
+		const targetElement = document.querySelector(wordLink.getAttribute('href'));
+		if (targetElement) {
+			document.querySelectorAll('.highlight-origin').forEach(el => el.classList.remove('highlight-origin'));
+			targetElement.classList.add('highlight-origin');
+			targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			document.getElementById('back-btn').title = "원래 단어로 돌아가기";
+			document.getElementById('back-btn').style.display = 'block';
+		}
+		return;
+	}
+
+	// 3. Image Placeholder (No action, skip)
+	if (clickedLabel === 'image-placeholder') {
+		return;
+	}
+	
+	// 4. 단어, 문장, 뜻 셀을 클릭하여 개별 숨김/표시 (기능 추가/통합)
+	else if (clickedLabel === '단어' || clickedLabel === '문장' || clickedLabel === '뜻') {
+		// 시험 모드 중에는 개별 셀 숨김/표시를 허용하지 않습니다. (Test Mode가 전체를 통제함)
+		if (isTestMode) {
+			return;
+		}
+		clickedCell.classList.toggle('text-hidden');
+		return;
+	}
+
+	// 5. Audio Playback and Progression Logic (Preloaded & Firestore Update)
+	else if (clickedLabel === '듣기') {
+		// 클릭 방지 상태인지 먼저 확인
+		if (clickedCell.classList.contains('no-pointer-events')) return;
+
+		const isHighlighted = clickedCell.classList.contains('highlight-listen-cell');
+
+		const tableId = row.closest('table').id;
+		const itemNum = parseInt(row.id.split('-')[1], 10);
+		const dataItem = tableId === 'sentence-table'
+			? sentenceData.find(item => item.num === itemNum)
+			: wordData.find(item => item.num === itemNum);
+
+		const audioUrl = dataItem?.audioUrl;
+
+		if (audioUrl) {
+			const audio = audioCache[audioUrl];
+			if (!audio) return;
+
+			const originalContent = clickedCell.textContent;
+
+			// 연타 방지 (재생 중 클릭 방지)
+			clickedCell.classList.add('no-pointer-events');
+
+			// 재생 위치 초기화 및 재생
+			audio.currentTime = 0;
+			clickedCell.textContent = '🔊'; // Play icon
+
+			audio.onended = async () => {
+				clickedCell.textContent = originalContent; // Revert icon
+
+				// 1. Increment Repeat Count (Only if highlighted - Firestore Update)
+				if (isHighlighted) {
+					const repeatCell = row.querySelector('.repeat-cell');
+					// We increment the count based on the current state from Firestore, not the UI
+					let currentCount = (learningProgress[rowId]?.repeat || 0) + 1;
+					
+					// Firestore 업데이트 (비동기 처리)
+					await saveLearningProgress(rowId, { repeat: currentCount });
+
+					// 2. Move Highlight to next row 
+					findNextRowAndHighlight(row); // 여기서 no-pointer-events 해제됨
+				} else {
+					clickedCell.classList.remove('no-pointer-events'); // 비하이라이트 셀은 재생 끝나면 바로 해제
+				}
+			};
+
+			audio.onerror = () => {
+				console.error("Audio playback failed (onerror) for:", audioUrl);
+				clickedCell.textContent = '⚠️';
+				setTimeout(() => {
+					clickedCell.textContent = originalContent;
+					clickedCell.classList.remove('no-pointer-events'); // 오류 발생 시에도 해제
+				}, 1000);
+			};
+
+			// Playback initiated by direct user gesture
+			audio.play().catch(error => {
+				console.error("Audio playback failed (catch) - likely Autoplay Policy issue on iOS:", error);
+				// 사용자에게 재생 실패를 알림 (모바일에서 처음 클릭 시 흔함)
+				clickedCell.textContent = '⚠️';
+				setTimeout(() => {
+					clickedCell.textContent = originalContent;
+					clickedCell.classList.remove('no-pointer-events');
+				}, 1000);
+			});
+		}
+		return;
+	}
+}
+
+
+function handleHeaderClick(e) {
+const header = e.target;
+// 수정: 시험 모드에서도 숨김/표시는 허용 -> 이제 시험 모드에서 숨김/표시 클릭은 무시
+if (!header.classList.contains('clickable') || header.tagName !== 'TH') return;
+
+// 1. 반복 횟수 초기화 버튼 클릭 감지
+const resetIcon = e.target.closest('span[id^="reset-"]');
+if (resetIcon) {
+const tableId = resetIcon.id.includes('word') ? 'word-table' : 'sentence-table';
+handleResetRepeatCount(tableId);
+return;
+}
+
+// 2. 일반적인 숨김/표시 헤더 클릭 로직 (제거됨: 헤더에서 'clickable' 클래스와 '숨김/표시' 텍스트 제거)
+// 이제 이 블록은 '반복 초기화'가 아닌 다른 'clickable' 헤더가 생겼을 때만 작동합니다.
+// (단어/뜻 토글 스위치는 클릭 가능한 TH가 아닌 TH 내부의 INPUT 태그를 사용합니다)
+}
+
+
+function scrollToSection(id) {
+const targetElement = document.getElementById(id);
+if (!targetElement) return;
+
+// 문장 테이블의 경우 이전 형제 요소(헤더)로 스크롤, 섹션의 경우 h2로 스크롤
+const scrollTarget = (id === 'writing-practice-section' || id === 'cursive-practice-section' || id === 'sentence-table') ?
+document.querySelector(`#${id}`).previousElementSibling.querySelector('h2') || document.querySelector(`#${id}`) : document.querySelector(`#${id}`).previousElementSibling;
+
+
+if (scrollTarget) {
+lastScrollY = window.scrollY;
+lastActiveSentenceId = null;
+lastWritingPracticeY = null;
+scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+const backBtn = document.getElementById('back-btn');
+backBtn.title = "이전 위치로 돌아가기";
+backBtn.style.display = 'block';
+}
+}
+
+
+function handleBackButtonClick() {
+const backBtn = document.getElementById('back-btn');
+const highlighted = document.querySelector('.highlight-origin');
+if(highlighted) highlighted.classList.remove('highlight-origin');
+
+if (lastActiveSentenceId) {
+document.getElementById(lastActiveSentenceId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+lastActiveSentenceId = null;
+} else if (lastScrollY !== null) {
+window.scrollTo({ top: lastScrollY, behavior: 'smooth' });
+lastScrollY = null;
+} else if (lastWritingPracticeY !== null) {
+window.scrollTo({ top: lastWritingPracticeY, behavior: 'smooth' });
+lastWritingPracticeY = null;
+}
+backBtn.style.display = 'none';
+}
+
+
+// ===================================================================================
+// 초기화 및 리스너 설정
+// ===================================================================================
+
+
+function setupToggleListeners() {
+const columnToggles = [
+{ id: 'toggle-sentence-col', selector: '#sentence-table tbody tr td[data-label="문장"]' },
+{ id: 'toggle-word-col', selector: '#word-table tbody tr td[data-label="단어"]' },
+{ id: 'toggle-sentence-meaning-col', selector: '#sentence-table tbody tr td[data-label="뜻"]' },
+{ id: 'toggle-word-meaning-col', selector: '#word-table tbody tr td[data-label="뜻"]' },
+];
+
+columnToggles.forEach(t => {
+const toggleEl = document.getElementById(t.id);
+if (toggleEl) {
+// --- 오류 수정: 닫는 괄호와 중괄호 추가 ---
+toggleEl.addEventListener('change', function() {
+const cells = document.querySelectorAll(t.selector);
+cells.forEach(cell => {
+this.checked ? cell.classList.add('text-hidden') : cell.classList.remove('text-hidden');
+});
+});
+// ----------------------------------------
+}
+});
+}
+
+
+function setupGlobalEventListeners() {
+// Navigation/Scroll Controls
+document.getElementById('home-btn').addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+document.getElementById('sentence-learning-btn').addEventListener('click', () => scrollToSection('sentence-table'));
+document.getElementById('writing-practice-btn').addEventListener('click', () => scrollToSection('writing-practice-section'));
+document.getElementById('back-btn').addEventListener('click', handleBackButtonClick);
+
+// Table/Interactivity Controls
+document.getElementById('sentence-table').addEventListener('click', handleTableClick);
+document.getElementById('word-table').addEventListener('click', handleTableClick);
+document.querySelectorAll('th.clickable').forEach(header => { header.addEventListener('click', handleHeaderClick); });
+
+// 추가: 반복 횟수 초기화 버튼 클릭 이벤트 리스너
+document.getElementById('reset-word-repeat').addEventListener('click', () => handleResetRepeatCount('word-table'));
+document.getElementById('reset-sentence-repeat').addEventListener('click', () => handleResetRepeatCount('sentence-table'));
+
+// Toggles and Test Mode
+document.getElementById('test-mode-btn').addEventListener('click', toggleTestMode);
+setupToggleListeners();
+
+// Practice Section Links (Delegated Event)
+document.querySelectorAll('.practice-section').forEach(section => {
+section.addEventListener('click', (e) => {
+// 삭제: 문장표의 하이퍼링크 기능 제거에 따라, 문장표 링크 클릭 처리 로직 제거
+const link = e.target.closest('a');
+if (!link || !link.getAttribute('href')?.startsWith('#')) return;
+e.preventDefault();
+
+const targetElement = document.querySelector(link.getAttribute('href'));
+if (targetElement) {
+lastWritingPracticeY = window.scrollY;
+lastActiveSentenceId = null;
+lastScrollY = null;
+targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+document.getElementById('back-btn').title = "쓰기 섹션으로 돌아가기";
+document.getElementById('back-btn').style.display = 'block';
+}
+});
+});
+
+// Game/Quest Controls
+document.getElementById('word-game-btn').addEventListener('click', () => startGame('word'));
+document.getElementById('sentence-game-btn').addEventListener('click', () => startGame('sentence'));
+document.getElementById('game-audio-btn').addEventListener('click', handleGameAudioClick); // NEW: 게임 오디오 버튼 리스너
+document.querySelectorAll('.answer-option').forEach(option => { option.addEventListener('click', selectAnswer); });
+document.getElementById('return-to-main-btn').addEventListener('click', returnToMain);
+document.getElementById('exit-game-btn').addEventListener('click', exitGame);
+
+document.getElementById('pronunciation-quest-btn').addEventListener('click', startPronunciationQuest);
+document.getElementById('accept-quest-btn').addEventListener('click', () => {
+document.getElementById('quest-king-screen').classList.add('game-hidden');
+document.getElementById('quest-ui').classList.remove('game-hidden');
+showNextQuestWord();
+});
+document.getElementById('exit-quest-btn').addEventListener('click', exitQuest);
+document.getElementById('return-to-main-from-quest-btn').addEventListener('click', exitQuest);
+
+// 돋보기 버튼 클릭 시 오디오 재생 기능
+document.getElementById('quest-mic-btn').addEventListener('click', handleQuestCheckClick);
+
+document.getElementById('quest-correct-btn').addEventListener('click', () => handleSelfAssessment(true));
+document.getElementById('quest-incorrect-btn').addEventListener('click', () => handleSelfAssessment(false));
+
+// Activity Timer
+document.addEventListener('mousedown', resetInactivityTimer);
+document.addEventListener('keydown', resetInactivityTimer);
+document.addEventListener('touchstart', resetInactivityTimer);
+document.addEventListener('scroll', resetInactivityTimer);
+}
+
+/*
+* 수정됨: 돋보기 아이콘 클릭 시 해당 단어 오디오 재생 후, O/X 버튼 노출*/
+function handleQuestCheckClick() {
+const micBtn = document.getElementById('quest-mic-btn');
+const feedbackEl = document.getElementById('quest-feedback');
+const controls = document.getElementById('quest-controls');
+const guardianMessagebox = document.getElementById('quest-message-box');
+
+// 1. Get current word/audio info
+const currentWord = questWords[questQuestionCount];
+const audioUrl = currentWord?.audioUrl;
+
+if (!audioUrl) {
+guardianMessagebox.textContent = "오디오 파일을 찾을 수 없습니다.";
+return;
+}
+
+// 캐시된 Audio 객체를 사용
+const audio = audioCache[audioUrl];
+if (audio) {
+const originalIcon = micBtn.textContent; // 🔍
+micBtn.disabled = true;
+micBtn.textContent = '🔊'; // Playing icon
+micBtn.classList.add('playing'); // Use existing pulse animation
+
+// 재생 위치 초기화 (Preload의 핵심)
+audio.currentTime = 0;
+
+audio.onended = async () => {
+micBtn.classList.remove('playing');
+micBtn.textContent = originalIcon; // Revert to 🔍
+micBtn.disabled = false; // Next word handles its own disabled state
+
+// Show self-assessment controls after audio ends
+feedbackEl.textContent = "발음을 따라해보고, 맞게 발음했는지 스스로 평가해주세요.";
+guardianMessagebox.textContent = "발음이 틀렸는데도 O를 누르면 몬스터가 금새 풀려날 수 있어요.";
+controls.classList.remove('game-hidden');
+micBtn.classList.add('game-hidden');
+};
+
+audio.onerror = () => {
+console.error("Audio playback failed (onerror) for:", audioUrl);
+micBtn.classList.remove('playing');
+micBtn.textContent = '❌';
+micBtn.disabled = false;
+guardianMessagebox.textContent = "오디오 재생 오류! 다시 시도하세요.";
+setTimeout(() => { micBtn.textContent = originalIcon; }, 1000);
+};
+
+audio.play().catch(error => {
+console.error("Audio playback failed (catch) - likely Autoplay Policy issue on iOS:", error);
+micBtn.classList.remove('playing');
+micBtn.textContent = '⚠️';
+micBtn.disabled = false;
+guardianMessagebox.textContent = "오디오 재생에 실패했습니다. (클릭 후 재생 정책 확인)";
+setTimeout(() => { micBtn.textContent = originalIcon; }, 1000);
+});
+}
+}
+
+// NEW: 게임 모드에서 수동 오디오 재생 함수
+function handleGameAudioClick(e) {
+    const btn = e.target;
+    const audioUrl = btn.getAttribute('data-audio-url');
+
+    if (!audioUrl || btn.disabled) return;
+
+    const audio = audioCache[audioUrl];
+    if (audio) {
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = '... 재생 중 ...';
+        
+        audio.currentTime = 0;
+        
+        audio.onended = () => {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        };
+
+        audio.onerror = () => {
+            console.error("Game Audio playback failed (onerror):", audioUrl);
+            btn.textContent = '⚠️ 오류';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 1000);
+        };
+
+        // Playback initiated by direct user gesture
+        audio.play().catch(error => {
+            console.error("Game Audio playback failed (catch):", error);
+            btn.textContent = '⚠️ 재생 실패';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 1000);
+        });
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', async () => {
+// 1. UI Setup
+adjustBodyPadding();
+window.addEventListener('resize', adjustBodyPadding);
+
+// 2. Data Initialization & Audio Preload
+wordLookupMap = initializeWordLookupMap(wordData, sentenceData);
+preloadAllAudio();
+
+// 3. Table Population (Initial rendering with default state)
+populateTable('sentence-table', sentenceData, false, wordLookupMap);
+populateTable('word-table', wordData, true, wordLookupMap);
+
+// 4. Writing Practice Population (Modified to use the 'paragraph' field)
+const paragraphsContainer = document.getElementById('writing-paragraphs');
+// 4-1. Group sentences by paragraph field
+const paragraphs = sentenceData.reduce((acc, sentence) => {
+    const pKey = sentence.paragraph;
+    if (!acc[pKey]) {
+        acc[pKey] = [];
+    }
+    acc[pKey].push(sentence);
+    return acc;
+}, {});
+
+// 4-2. Iterate over grouped paragraphs and render
+let paragraphsHtml = '';
+for (const pKey in paragraphs) {
+    const chunk = paragraphs[pKey];
+    let currentParagraph = '<p class="handwriting-paragraph">';
+    chunk.forEach(sentence => {
+        currentParagraph += `<sup><a href="#sentence-${sentence.num}" title="${sentence.num}번 문장으로 이동">${sentence.num}</a></sup> ${sentence.eng} `;
+    });
+    currentParagraph += '</p>';
+    paragraphsHtml += currentParagraph;
+}
+
+document.getElementById('writing-paragraphs').innerHTML = paragraphsHtml;
+document.getElementById('cursive-paragraphs').innerHTML = paragraphsHtml; // Cursive uses the same content
+
+// 5. Global Event Listeners Setup
+setupGlobalEventListeners();
+
+// 6. Firebase Initialization and Data Fetching (Triggers updateUIFromState)
+await initializeFirebase();
+
+// 7. Timer Initialization
+document.getElementById('learning-timer-display').textContent = formatTime(learningSecondsElapsed);
+resetInactivityTimer();
+});
+
+
+// ===================================================================================
+// Game/Quest Functions
+// ===================================================================================
+
+
+function startGame(gameType) {
+currentGameType = gameType;
+currentGameTimeLimit = (currentGameType === 'word') ? 4 : 7;
+isEngTestMode = document.getElementById(`${gameType}-game-test-type-toggle`).checked;
+document.body.classList.add('main-content-hidden');
+const [gameOverlay, introScreen, gameUi, gameResultScreen] = ['game-overlay', 'game-intro-screen', 'game-ui', 'game-result-screen'].map(id => document.getElementById(id));
+
+gameOverlay.classList.remove('game-hidden');
+introScreen.classList.remove('game-hidden');
+gameUi.classList.add('game-hidden');
+gameResultScreen.classList.add('game-hidden');
+
+currentGameScore = 0;
+currentQuestionIndex = 0;
+consecutiveWrongAnswers = 0;
+incorrectQueue = [];
+difficultyPoolIndex = 0;
+
+const sourceData = (gameType === 'word') ? wordData : sentenceData;
+shuffledData = [...sourceData].sort(() => Math.random() - 0.5);
+totalQuestionsTarget = (sourceData.length * 2 > 30) ? sourceData.length * 2 : 30; // 질문 목표를 데이터 길이의 2배 또는 최소 30으로 설정
+difficultyPool = [...sourceData].sort((a, b) => a.eng.replace(/<[^>]+>/g, '').length - b.eng.replace(/<[^>]+>/g, '').length);
+
+swimmerPosition = 75;
+sharkPosition = 10;
+document.getElementById('swimmer').style.left = `${swimmerPosition}%`;
+document.getElementById('shark').style.left = `${sharkPosition}%`;
+document.getElementById('game-score').textContent = `Score: ${currentGameScore}`;
+
+setTimeout(() => {
+introScreen.classList.add('game-hidden');
+gameUi.classList.remove('game-hidden');
+showNextQuestion();
+}, 2500);
+}
+
+
+function showNextQuestion() {
+const answerOptions = document.querySelectorAll('.answer-option');
+answerOptions.forEach(opt => {
+opt.classList.remove('correct', 'incorrect', 'no-click');
+});
+
+// 질문이 목표치에 도달했거나 데이터가 부족하면 종료
+if (currentQuestionIndex >= totalQuestionsTarget || shuffledData.length === 0) {
+endGame(true);
+return;
+}
+
+let currentItem;
+if (currentQuestionIndex < shuffledData.length) {
+currentItem = shuffledData[currentQuestionIndex];
+} else if (incorrectQueue.length > 0) {
+currentItem = incorrectQueue.shift();
+shuffledData.push(currentItem); // 다시 셔플된 데이터의 끝에 추가
+} else {
+// 오답 큐도 비어있으면 쉬운 문제로 돌아감
+currentItem = difficultyPool[difficultyPoolIndex++ % difficultyPool.length];
+shuffledData.push(currentItem);
+}
+
+let questionText = isEngTestMode ? currentItem.kor : currentItem.eng.split('/')[0].trim().replace(/\(.\)/g, ''); // 단어의 경우 / 이후의 내용 제거, 문장의 경우 전체
+
+document.getElementById('game-question').textContent = questionText;
+document.getElementById('game-progress').textContent = `${currentQuestionIndex + 1} / ${totalQuestionsTarget}`;
+
+// --- 게임 오디오 재생 로직 수정: 자동 재생 제거, 버튼 표시 ---
+const gameAudioBtn = document.getElementById('game-audio-btn');
+const audioUrl = currentItem?.audioUrl;
+
+if (audioUrl && !isEngTestMode) { // 영어 단어/문장일 때만 오디오 버튼 표시
+    gameAudioBtn.style.display = 'block';
+    gameAudioBtn.disabled = false;
+    gameAudioBtn.textContent = '🔊 듣기';
+    gameAudioBtn.setAttribute('data-audio-url', audioUrl);
+} else {
+    gameAudioBtn.style.display = 'none';
+}
+// --- End Game Audio Logic ---
+
+const answers = generateAnswers(currentItem, isEngTestMode);
+answerOptions.forEach((option, index) => {
+option.textContent = answers[index];
+});
+
+gameTimeLeft = currentGameTimeLimit;
+document.getElementById('game-timer').textContent = gameTimeLeft;
+if (gameTimerInterval) clearInterval(gameTimerInterval);
+gameTimerInterval = setInterval(updateGameTimer, 1000);
+}
+
+
+function updateGameTimer() {
+gameTimeLeft--;
+document.getElementById('game-timer').textContent = gameTimeLeft;
+if (gameTimeLeft <= 0) {
+clearInterval(gameTimerInterval);
+handleAnswer(null);
+}
+}
+
+
+function generateAnswers(correctItem, isEngTest) {
+const distractors = new Set();
+const sourceData = (currentGameType === 'word') ? wordData : sentenceData;
+
+// Clean up the correct answer for display/comparison
+let correctAnswer;
+if (isEngTest) {
+correctAnswer = correctItem.eng.split('/')[0].trim().replace(/\(.\)/g, '');
+} else {
+correctAnswer = correctItem.kor;
+}
+
+// Clean up all options for the pool
+let allOptions;
+if (isEngTest) {
+allOptions = sourceData.map(item => item.eng.split('/')[0].trim().replace(/\(.\)/g, ''));
+} else {
+allOptions = sourceData.map(item => item.kor);
+}
+
+while(distractors.size < 3) {
+const randomOption = allOptions[Math.floor(Math.random() * allOptions.length)];
+if (randomOption !== correctAnswer) {
+distractors.add(randomOption);
+}
+}
+
+const answers = [correctAnswer, ...distractors];
+return answers.sort(() => Math.random() - 0.5);
+}
+
+
+function selectAnswer(e) {
+clearInterval(gameTimerInterval);
+const selectedText = e.target.textContent;
+handleAnswer(selectedText, e.target);
+}
+
+
+function handleAnswer(selectedText, selectedOptionEl = null) {
+const currentItem = shuffledData[currentQuestionIndex];
+let primaryEngWord = currentItem.eng.split('/')[0].trim().replace(/\(.\)/g, '');
+let correctKorMeaning = currentItem.kor;
+let isCorrect = isEngTestMode ? (selectedText === primaryEngWord) : (selectedText === correctKorMeaning);
+
+const answerOptions = document.querySelectorAll('.answer-option');
+answerOptions.forEach(opt => {
+opt.classList.add('no-click');
+const correctOptionText = isEngTestMode ? primaryEngWord : correctKorMeaning;
+if (opt.textContent === correctOptionText) {
+opt.classList.add('correct');
+}
+});
+
+if(selectedOptionEl && !isCorrect) {
+selectedOptionEl.classList.add('incorrect');
+}
+
+if(isCorrect) {
+consecutiveWrongAnswers = 0;
+swimmerPosition += 4;
+const points = 500 + Math.round((gameTimeLeft / currentGameTimeLimit) * 500);
+currentGameScore += points;
+} else {
+// 틀린 문제 2번 반복 (오답 큐에 추가)
+incorrectQueue.push(currentItem, currentItem);
+totalQuestionsTarget += 2;
+currentGameScore = Math.max(0, currentGameScore - 1000);
+consecutiveWrongAnswers++;
+sharkPosition += 15;
+}
+
+document.getElementById('game-score').textContent = `Score: ${currentGameScore}`;
+
+// Keep elements within bounds after large moves
+if (swimmerPosition > 90) {
+const panAmount = swimmerPosition - 70;
+swimmerPosition -= panAmount;
+sharkPosition = Math.max(5, sharkPosition - panAmount);
+}
+
+document.getElementById('swimmer').style.left = `${swimmerPosition}%`;
+document.getElementById('shark').style.left = `${sharkPosition}%`;
+
+const distance = swimmerPosition - sharkPosition;
+const swimmerEl = document.getElementById('swimmer');
+swimmerEl.style.filter =
+distance > 50 ? 'drop-shadow(0 0 10px #DCDCDC)' :
+distance > 30 ? 'drop-shadow(0 0 10px #1E93AB)' :
+'drop-shadow(0 0 10px #E62727)';
+
+if (sharkPosition >= swimmerPosition || consecutiveWrongAnswers >= 4) {
+setTimeout(() => endGame(false), 500);
+return;
+}
+
+currentQuestionIndex++;
+
+if (currentQuestionIndex >= totalQuestionsTarget) {
+setTimeout(() => endGame(true), 2000);
+return;
+}
+
+setTimeout(showNextQuestion, 2000);
+}
+
+
+function endGame(didWin) {
+if(gameTimerInterval) clearInterval(gameTimerInterval);
+document.getElementById('game-ui').classList.add('game-hidden');
+const resultScreen = document.getElementById('game-result-screen');
+resultScreen.classList.remove('game-hidden');
+document.getElementById('final-score').textContent = currentGameScore;
+
+document.getElementById('game-result-title').textContent = didWin ? "탈출 성공! 🎉" : "상어에게 잡혔어요... 😨";
+// 점수 저장 (Firestore Update)
+const scoreKey = (currentGameType === 'word') ? 'word' : 'sentence';
+saveGameScore(scoreKey, currentGameScore);
+}
+
+
+function returnToMain() {
+document.body.classList.remove('main-content-hidden');
+document.getElementById('game-overlay').classList.add('game-hidden');
+
+const scoreKey = (currentGameType === 'word') ? 'word' : 'sentence';
+const scoreDisplayId = (currentGameType === 'word') ? 'word-game-score-display' : 'sentence-game-score-display';
+
+const lastScore = gameScores[scoreKey] || '0'; // Load from global state which is synced with Firestore
+const scoreDisplay = document.getElementById(scoreDisplayId);
+scoreDisplay.textContent = `최근 ${currentGameType === 'word' ? '단어' : '문장'}게임 점수: ${lastScore}점`;
+scoreDisplay.classList.remove('game-hidden');
+}
+
+
+function exitGame() {
+if(gameTimerInterval) clearInterval(gameTimerInterval);
+document.body.classList.remove('main-content-hidden');
+document.getElementById('game-overlay').classList.add('game-hidden');
+}
+
+
+function startPronunciationQuest() {
+document.body.classList.add('main-content-hidden');
+const [questOverlay, kingScreen, questUi, resultScreen] = ['pronunciation-quest-overlay', 'quest-king-screen', 'quest-ui', 'quest-result-screen'].map(id => document.getElementById(id));
+
+questOverlay.classList.remove('game-hidden');
+kingScreen.classList.remove('game-hidden');
+questUi.classList.add('game-hidden');
+resultScreen.classList.add('game-hidden');
+
+// Update for new word count
+document.getElementById('king-speech-bubble').textContent = `${wordData.length}마리의 몬스터를 잡아오게! 부탁하겠네!`;
+
+questScore = 0;
+questQuestionCount = 0;
+monstersCaught = 0;
+questWords = [...wordData].sort(() => 0.5 - Math.random());
+document.getElementById('quest-progress').textContent = `잡은 몬스터 수: ${monstersCaught}/${wordData.length}`;
+}
+
+
+function showNextQuestWord() {
+const monsterEl = document.getElementById('monster');
+const guardianMessagebox = document.getElementById('quest-message-box');
+const micBtn = document.getElementById('quest-mic-btn');
+
+// 퀘스트 종료 조건 확인 (모든 단어를 한번씩은 처리해야 함)
+if (questQuestionCount >= questWords.length && monstersCaught >= wordData.length) {
+endPronunciationQuest();
+return;
+}
+
+// 현재 퀘스트 진행 중인 단어
+const currentWord = questWords[questQuestionCount];
+if (!currentWord) {
+endPronunciationQuest();
+return;
+}
+
+// Reset monster animation state
+monsterEl.style.transition = 'opacity 0.5s';
+monsterEl.style.opacity = '0';
+monsterEl.style.left = '100%';
+
+setTimeout(() => {
+monsterEl.textContent = monsters[Math.floor(Math.random() * monsters.length)];
+monsterEl.style.transition = 'left 0.5s ease-out, opacity 0.5s ease-out';
+monsterEl.style.transform = 'translateY(-50%) scaleX(-1)';
+monsterEl.style.left = '80%';
+monsterEl.style.opacity = '1';
+
+// 텍스트 업데이트: 이제 오디오 듣기가 주요 액션이므로 메시지 변경
+guardianMessagebox.textContent = "몬스터 이름(단어)을 듣고 발음을 따라해 봅시다. 돋보기 버튼을 누르세요.";
+}, 500);
+
+let displayWord = currentWord.eng.split('/')[0].trim().replace(/\(.\)/g, '');
+
+document.getElementById('quest-word-display').textContent = displayWord;
+document.getElementById('quest-progress').textContent = `잡은 몬스터 수: ${monstersCaught}/${wordData.length}`;
+document.getElementById('quest-feedback').textContent = "";
+
+document.getElementById('quest-controls').classList.add('game-hidden');
+micBtn.classList.remove('game-hidden');
+micBtn.disabled = false;
+}
+
+
+function playAttackAnimation(isCorrect) {
+const guardian = document.getElementById('guardian');
+const guardianAttack = document.getElementById('guardian-attack');
+const monsterAttack = document.getElementById('monster-attack');
+const monsterEl = document.getElementById('monster');
+
+if (isCorrect) {
+guardian.classList.add('sparkling');
+guardianAttack.style.animation = 'none';
+void guardianAttack.offsetWidth;
+guardianAttack.style.animation = 'guardian-attack-anim 0.5s ease-out forwards';
+
+monsterEl.style.transition = 'left 2s, transform 2s, opacity 2s';
+monsterEl.style.left = 'calc(20% - 40px)';
+monsterEl.style.transform = 'translateY(-50%) scale(0.1) rotate(720deg) scaleX(-1)';
+monsterEl.style.opacity = '0';
+
+} else {
+monsterAttack.style.animation = 'none';
+void monsterAttack.offsetWidth;
+monsterAttack.style.animation = 'monster-attack-anim 0.5s ease-out forwards';
+}
+}
+
+
+function handleSelfAssessment(isCorrect) {
+const feedbackEl = document.getElementById('quest-feedback');
+const controls = document.getElementById('quest-controls');
+const guardian = document.getElementById('guardian');
+const guardianMessagebox = document.getElementById('quest-message-box');
+
+controls.classList.add('game-hidden');
+
+if (isCorrect) {
+monstersCaught++;
+questScore += 100;
+feedbackEl.textContent = "몬스터 획득에 성공하였습니다!";
+feedbackEl.className = "feedback-success";
+guardianMessagebox.textContent = "성공!";
+playAttackAnimation(true);
+} else {
+feedbackEl.textContent = "아쉽지만 다시 시도하자!!";
+feedbackEl.className = "feedback-fail";
+guardianMessagebox.textContent = "아쉽지만 한 번 더 시도해보자.";
+// Failed word goes back into the queue 3 steps later (so it's repeated soon)
+const failedWord = questWords[questQuestionCount];
+// Ensure we don't insert out of bounds
+const insertIndex = Math.min(questQuestionCount + 3, questWords.length);
+questWords.splice(insertIndex, 0, failedWord);
+}
+
+questQuestionCount++;
+
+setTimeout(() => {
+guardian.classList.remove('sparkling');
+showNextQuestWord();
+}, 2000);
+}
+
+
+function endPronunciationQuest() {
+document.getElementById('quest-ui').classList.add('game-hidden');
+const resultScreen = document.getElementById('quest-result-screen');
+resultScreen.classList.remove('game-hidden');
+document.getElementById('final-quest-score').textContent = questScore;
+document.getElementById('quest-result-title').textContent = "퀘스트 완료!";
+// 점수 저장 (Firestore Update)
+saveGameScore('quest', questScore);
+}
+
+
+function exitQuest() {
+document.body.classList.remove('main-content-hidden');
+document.getElementById('pronunciation-quest-overlay').classList.add('game-hidden');
+}
+
+</script>
+
+</body>
+</html>
